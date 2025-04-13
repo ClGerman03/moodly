@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import BentoImageGrid, { ImageLayout } from './BentoImageGrid';
-import ColorPaletteComponent from './ColorPalette';
-import LinkSection from './LinkSection';
-import TypographySection from './TypographySection';
-import TextSection from './TextSection';
+import BentoImageGrid, { ImageLayout } from './sections/BentoImageGrid';
+import ColorPaletteComponent from './sections/ColorPalette';
+import LinkSection from './sections/LinkSection';
+import TypographySection from './sections/TypographySection';
+import TextSection from './sections/TextSection';
 import AddSection from './AddSection';
 import { SectionType, ColorPalette, LinkItem, ImageMetadata, FontOption, TextContent } from '../types';
 
@@ -108,6 +108,15 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
     const updatedImages = [...currentImages, ...newImages];
     
     updateSectionData(sectionId, { images: updatedImages });
+  };
+  
+  // Manejar la reordenación de imágenes mediante arrastre
+  const handleImagesReorder = (sectionId: string, reorderedImages: string[]) => {
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+    
+    // Actualizar directamente el array de imágenes con el nuevo orden
+    updateSectionData(sectionId, { images: reorderedImages });
   };
 
   // Eliminar una imagen de una sección específica
@@ -246,6 +255,7 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
               onImagesAdd={(newImages) => handleImagesUpdate(section.id, newImages)}
               onImageRemove={(index) => handleImageRemove(section.id, index)}
               onImageMetadataChange={(imageUrl, metadata) => handleImageMetadataChange(section.id, imageUrl, metadata)}
+              onReorder={(reorderedImages) => handleImagesReorder(section.id, reorderedImages)}
               fileInputRef={fileInputRef}
               isLiveMode={isLiveMode}
             />

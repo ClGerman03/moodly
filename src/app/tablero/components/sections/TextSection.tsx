@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TextContent, TextSize } from "../types";
+import { TextContent, TextSize } from "../../types";
 
 interface TextSectionProps {
   initialText?: TextContent;

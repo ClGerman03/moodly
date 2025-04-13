@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { LucideFileText, LucideSettings, LucideEye } from "lucide-react";
-import SharePopup from "./SharePopup";
-import PdfExportPopup from "./PdfExportPopup";
+import SharePopup from "./popups/SharePopup";
+import PdfExportPopup from "./popups/PdfExportPopup";
 
 interface ConfigButtonProps {
   icon: React.ReactNode;

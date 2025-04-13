@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, ChangeEvent, useRef } from "react";
+import { useState, ChangeEvent, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, Reorder, useDragControls } from "framer-motion";
 import { Move } from "lucide-react";
-import ImageDetailPopup from "./ImageDetailPopup";
+import ImageDetailPopup from "../popups/ImageDetailPopup";
 
 export type ImageLayout = "square" | "vertical" | "horizontal";
 
@@ -23,6 +23,7 @@ interface BentoImageGridProps {
   onImageMetadataChange?: (imageUrl: string, metadata: ImageMetadata) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   isLiveMode?: boolean;
+  onReorder?: (newImages: string[]) => void;
 }
 
 const BentoImageGrid = ({
@@ -35,10 +36,16 @@ const BentoImageGrid = ({
   onImageMetadataChange = () => {},
   fileInputRef,
   isLiveMode = false,
+  onReorder = (newImages) => {
+    // Podemos actualizar imageLayouts, imageMetadata acorde a los nuevos índices
+    // Si la implementación ya maneja esto a través de claves, no hace falta hacer nada
+  }
 }: BentoImageGridProps) => {
   const [hoveredImage, setHoveredImage] = useState<number | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isDetailPopupOpen, setIsDetailPopupOpen] = useState<boolean>(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [imagesList, setImagesList] = useState<string[]>(images);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Determinar layout para una imagen
@@ -58,6 +65,11 @@ const BentoImageGrid = ({
       handleFiles(files);
     }
   };
+  
+  // Actualizar el estado local cuando cambien las imágenes externas
+  useEffect(() => {
+    setImagesList(images);
+  }, [images]);
 
   // Manejar la selección de archivos mediante el input
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +111,38 @@ const BentoImageGrid = ({
     setIsDetailPopupOpen(true);
   };
   
+  // Manejar la reordenación de imágenes cuando se complete el arrastre
+  const handleReorder = (newOrder: string[]) => {
+    setImagesList(newOrder);
+    onReorder(newOrder);
+    
+    // Actualizar las posiciones en imageLayouts
+    const newLayouts = new Map<number, ImageLayout>();
+    newOrder.forEach((imageUrl, newIndex) => {
+      // Encontrar el índice antiguo
+      const oldIndex = images.findIndex(url => url === imageUrl);
+      if (oldIndex !== -1 && imageLayouts.has(oldIndex)) {
+        // Transferir el layout de la posición antigua a la nueva
+        newLayouts.set(newIndex, imageLayouts.get(oldIndex)!);
+      }
+    });
+    
+    // Actualizar cada layout individualmente para mantener consistencia
+    newLayouts.forEach((layout, index) => {
+      onLayoutChange(index, layout);
+    });
+  };
+  
+  // Manejar el inicio de arrastre
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+  
+  // Manejar el fin de arrastre
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+  
   // Guardar metadatos de la imagen
   const handleSaveImageMetadata = (title: string, description: string) => {
     if (selectedImageIndex !== null) {
@@ -115,9 +159,13 @@ const BentoImageGrid = ({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <div
+      <Reorder.Group
+        as="div"
         className="grid grid-cols-3 gap-5"
         ref={gridRef}
+        axis="y"
+        values={imagesList}
+        onReorder={handleReorder}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -127,16 +175,20 @@ const BentoImageGrid = ({
         }}
       >
         <AnimatePresence>
-          {images.map((imageUrl, index) => {
+          {imagesList.map((imageUrl, index) => {
             const layout = getLayout(index);
             // El layout se aplica directamente en el style con gridColumn y gridRow
 
             return (
-              <motion.div
-                key={index}
-                layout
-                data-index={index}
-                className={`relative rounded-xl overflow-hidden transition-shadow duration-200 ${hoveredImage === index ? 'shadow-lg ring-2 ring-offset-2 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900' : 'shadow-md'} group ${!isLiveMode ? 'cursor-pointer' : ''}`}
+              <Reorder.Item
+                key={imageUrl}
+                value={imageUrl}
+                as="div"
+                dragListener={false} // Controlamos el drag con el botón, no con todo el elemento
+                // Usaremos controles personalizados a través del botón de arrastre
+                onDragStart={() => handleDragStart(index)}
+                onDragEnd={handleDragEnd}
+                className={`relative rounded-xl overflow-hidden transition-shadow duration-200 ${hoveredImage === index ? 'shadow-lg ring-2 ring-offset-2 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900' : 'shadow-md'} group ${!isLiveMode ? 'cursor-pointer' : ''} ${draggedIndex === index ? 'z-10 opacity-90' : ''}`}
                 style={{
                   gridColumn: `span ${layout === 'horizontal' ? 2 : 1}`,
                   gridRow: `span ${layout === 'vertical' ? 2 : 1}`,
@@ -145,8 +197,13 @@ const BentoImageGrid = ({
                 onMouseEnter={() => setHoveredImage(index)}
                 onMouseLeave={() => setHoveredImage(null)}
                 initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{ 
+                  opacity: 1, 
+                  scale: 1,
+                  boxShadow: draggedIndex === index ? "0 20px 25px -5px rgb(0 0 0 / 0.2)" : "none"
+                }}
                 exit={{ opacity: 0, scale: 0.8 }}
+                layout
 
               >
                 <Image
@@ -173,6 +230,15 @@ const BentoImageGrid = ({
                         className="bg-black/70 text-white p-1 rounded-full hover:bg-black/80 cursor-grab active:cursor-grabbing"
                         title="Arrastra para mover esta imagen"
                         aria-label="Arrastrar imagen"
+                        onPointerDown={(e) => {
+                          // Iniciamos el arrastre al hacer clic en el botón
+                          const item = e.currentTarget.closest('[data-value]') as HTMLElement;
+                          if (item) {
+                            // @ts-ignore - Framer Motion añade esta función al elemento
+                            item._dragControls?.start(e);
+                            handleDragStart(index);
+                          }
+                        }}
                       >
                         <Move size={14} />
                       </div>
@@ -236,7 +302,7 @@ const BentoImageGrid = ({
                     </motion.div>
                   </>
                 )}
-              </motion.div>
+              </Reorder.Item>
             );
           })}
           {/* Botón minimalista para agregar imágenes - oculto en modo live */}
@@ -260,7 +326,7 @@ const BentoImageGrid = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </Reorder.Group>
 
       {/* Input de archivo oculto */}
       <input
