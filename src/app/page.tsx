@@ -7,7 +7,7 @@ export default function Home() {
       <main className="flex flex-col items-center justify-center w-full max-w-md mx-auto text-center space-y-10">
         {/* Imagen sin fondo circular */}
         <Image
-          src="/images/Moodly-inicio.png"
+          src="/images/Moodly-Inicio.png"
           alt="Moodly-Logo"
           width={176}
           height={176}
