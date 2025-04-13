@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import BentoImageGrid, { ImageLayout } from './sections/BentoImageGrid';
+import BentoImageGrid from './sections/BentoImageGrid';
+import { ImageLayout } from './sections/types/bento';
 import ColorPaletteComponent from './sections/ColorPalette';
 import LinkSection from './sections/LinkSection';
 import TypographySection from './sections/TypographySection';
@@ -113,10 +114,37 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
   // Manejar la reordenación de imágenes mediante arrastre
   const handleImagesReorder = (sectionId: string, reorderedImages: string[]) => {
     const section = sections.find(s => s.id === sectionId);
-    if (!section) return;
+    if (!section || !section.data) return;
     
-    // Actualizar directamente el array de imágenes con el nuevo orden
-    updateSectionData(sectionId, { images: reorderedImages });
+    const currentImages = section.data.images || [];
+    const currentLayouts = section.data.imageLayouts || {};
+    
+    // Crear un nuevo mapeo de layouts basado en las nuevas posiciones
+    const newImageLayouts: { [key: number]: ImageLayout } = {};
+    
+    // Para cada imagen en el nuevo orden, encontrar su posición anterior y su layout
+    reorderedImages.forEach((imageUrl, newIndex) => {
+      const oldIndex = currentImages.findIndex(url => url === imageUrl);
+      
+      if (oldIndex !== -1 && currentLayouts[oldIndex]) {
+        // Transferir el layout de la posición anterior a la nueva posición
+        newImageLayouts[newIndex] = currentLayouts[oldIndex];
+      }
+    });
+    
+    // Actualizar las secciones con las imágenes reordenadas y los layouts actualizados
+    const updatedSections = sections.map(s => 
+      s.id === sectionId ? { 
+        ...s, 
+        data: { 
+          ...s.data, 
+          images: reorderedImages,
+          imageLayouts: newImageLayouts  // Actualizar los layouts con el nuevo mapeo
+        } 
+      } : s
+    );
+    
+    setSections(updatedSections);
   };
 
   // Eliminar una imagen de una sección específica
