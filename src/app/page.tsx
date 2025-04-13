@@ -6,15 +6,14 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-white dark:bg-gray-950 transition-all duration-500 ease-in-out">
       <main className="flex flex-col items-center justify-center w-full max-w-md mx-auto text-center space-y-10">
         {/* Imagen sin fondo circular */}
-        <div className="relative w-44 h-44 mb-4 overflow-hidden transition-transform duration-700 hover:scale-105">
-          <Image
-            src="/images/Moodly-inicio.png"
-            alt="Moodly-Logo"
-            fill
-            className="object-contain"
-            priority
-          />
-        </div>
+        <Image
+          src="/images/Moodly-inicio.png"
+          alt="Moodly-Logo"
+          width={176}
+          height={176}
+          className="object-contain"
+          priority
+        />
         
         <div className="space-y-4 transition-all duration-500">
           <h1 className="text-3xl md:text-4xl font-light tracking-wide text-gray-800 dark:text-gray-100">

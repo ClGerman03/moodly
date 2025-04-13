@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import ConfigPanel from './components/ConfigPanel';
 import SectionManager from './components/SectionManager';
 
@@ -8,21 +8,36 @@ export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
   const [isNameSet, setIsNameSet] = useState<boolean>(false);
   const [isLiveMode, setIsLiveMode] = useState<boolean>(false);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  const [showNameForm, setShowNameForm] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manejar la configuración del nombre del tablero
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (boardName.trim()) {
-      setIsNameSet(true);
+      // Iniciar la transición
+      setIsTransitioning(true);
+      
+      // Esperar a que termine la animación de fade-out antes de cambiar el estado
+      setTimeout(() => {
+        setIsNameSet(true);
+        setShowNameForm(false);
+        // Iniciar la animación de fade-in para el tablero
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 50);
+      }, 400); // Tiempo ligeramente menor que la duración de la transición
     }
   };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 transition-all duration-500 ease-in-out">
-      {!isNameSet ? (
-        // Pantalla para configurar el nombre del tablero - Estilo minimalista sin fondo
-        <div className="flex flex-col items-center justify-center h-screen w-full max-w-md mx-auto animate-fadeIn transition-all duration-500">
+      {/* Pantalla para configurar el nombre del tablero - Con transición suave */}
+      {showNameForm && (
+        <div 
+          className={`flex flex-col items-center justify-center h-screen w-full max-w-md mx-auto transition-opacity duration-400 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+        >
           <h1 className="mb-8 text-2xl font-light text-gray-800 dark:text-gray-100 tracking-wide">
             ¿Cómo se llamará tu tablero?
           </h1>
@@ -45,9 +60,13 @@ export default function Tablero() {
             </button>
           </form>
         </div>
-      ) : (
-        // Pantalla del tablero comenzando desde la parte superior
-        <div className="w-full max-w-6xl mx-auto p-6 pt-10 animate-fadeIn">
+      )}
+
+      {/* Pantalla del tablero con transición suave */}
+      {isNameSet && (
+        <div 
+          className={`w-full max-w-6xl mx-auto p-6 pt-10 transition-opacity duration-400 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+        >
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-light text-gray-800 dark:text-gray-100">
               {boardName}

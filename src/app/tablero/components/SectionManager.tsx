@@ -315,12 +315,15 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
         return (
           <motion.div 
             key={section.id} 
-            className="my-6"
+            className="mt-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
+            onMouseEnter={() => setHoveredSectionId(section.id)}
+            onMouseLeave={() => setHoveredSectionId(null)}
           >
+            {renderSectionTitle(section)}
             <TextSection 
               initialText={section.data?.textContent} 
               onChange={(textContent) => updateSectionData(section.id, { textContent })}

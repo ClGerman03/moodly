@@ -309,15 +309,18 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
             </div>
 
             {/* Image section (right side) */}
-            <div className="md:w-1/2 p-4 relative flex items-center justify-center overflow-hidden">
-              <div className="relative w-[90%] h-[90%] rounded-lg overflow-hidden shadow-sm">
+            <div className="md:w-1/2 p-4 relative flex items-center justify-center overflow-auto">
+              <div className="relative flex items-center justify-center max-h-full">
                 <Image
                   src={imageUrl}
                   alt={title || "Imagen seleccionada"}
-                  fill
+                  width={0}
+                  height={0}
                   sizes="(max-width: 768px) 95vw, 50vw"
-                  className="object-cover rounded-lg"
+                  className="rounded-lg shadow-sm max-w-full max-h-[70vh] h-auto w-auto object-contain"
+                  style={{ objectFit: 'contain' }}
                   priority
+                  unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
                 />
               </div>
             </div>
