@@ -38,10 +38,7 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
   
-  // Comprobar qué tipos de secciones ya existen
-  const getExistingSectionTypes = (): SectionType[] => {
-    return sections.map(section => section.type);
-  };
+  // Función eliminada ya que no se usa después de la actualización del AddSection
   
   // Manejar la adición de una nueva sección
   const handleAddSection = (type: SectionType) => {
@@ -52,7 +49,7 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
                      type === "text" ? "Texto" : "Enlaces";
     
     // Preparar datos iniciales según el tipo de sección
-    let initialData: any = {};
+    let initialData: Record<string, unknown> = {};
     
     if (type === "bento") {
       initialData = { images: [], imageLayouts: {}, imageMetadata: {} };
