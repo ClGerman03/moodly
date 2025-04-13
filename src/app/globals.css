@@ -1,26 +1,76 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --foreground-rgb: 51, 51, 51;
+  --background-start-rgb: 255, 255, 255; /* Fondo blanco puro */
+  --background-end-rgb: 255, 255, 255;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground-rgb: 245, 245, 245;
+    --background-start-rgb: 17, 17, 27; /* Gris oscuro */
+    --background-end-rgb: 17, 17, 27;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+  font-family: 'Inter', sans-serif;
+  font-weight: 300; /* Peso de fuente más ligero por defecto */
+  letter-spacing: 0.01em; /* Mejor espaciado de letras */
+}
+
+/* Ajustes tipográficos para un aspecto más fino y minimalista */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+p {
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+/* Animaciones personalizadas con menor intensidad */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Versiones sutiles de las animaciones */
+@keyframes slideUpSubtle {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes floatSubtle {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.9; }
+}
+
+/* Aplicar animaciones */
+.animate-fadeIn {
+  animation: fadeIn 1.2s ease-in-out;
+}
+
+.animate-slideUpSubtle {
+  animation: slideUpSubtle 0.7s ease-out 0.3s both;
+}
+
+.animate-floatSubtle {
+  animation: floatSubtle 8s ease-in-out infinite;
+}
+
+.animate-pulseSubtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
 }
