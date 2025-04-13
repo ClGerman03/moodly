@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ColorPalette {
@@ -29,7 +29,7 @@ const defaultPalette: ColorPalette = {
   colors: defaultColors
 };
 
-const ColorPaletteComponent = ({ initialPalettes, onChange }: ColorPaletteProps) => {
+const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }: ColorPaletteProps) => {
   // Inicializar con al menos una paleta por defecto si no hay paletas iniciales
   const [palettes, setPalettes] = useState<ColorPalette[]>(
     initialPalettes && initialPalettes.length > 0 
@@ -38,8 +38,9 @@ const ColorPaletteComponent = ({ initialPalettes, onChange }: ColorPaletteProps)
   );
   
   const [activePaletteIndex, setActivePaletteIndex] = useState<number>(0);
-  const [colorPickerOpen, setColorPickerOpen] = useState<number | null>(null);
+  const [editingColorIndex, setEditingColorIndex] = useState<number | null>(null);
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  const colorInputRef = useRef<HTMLInputElement>(null);
   
   // Obtener la paleta activa
   const activePalette = palettes[activePaletteIndex];
@@ -61,7 +62,13 @@ const ColorPaletteComponent = ({ initialPalettes, onChange }: ColorPaletteProps)
       onChange?.(updatedPalettes);
       
       // Abrir el selector de color para el nuevo color
-      setTimeout(() => setColorPickerOpen(activePalette.colors.length - 1), 100);
+      setTimeout(() => {
+        const newIndex = activePalette.colors.length;
+        setEditingColorIndex(newIndex - 1);
+        if (colorInputRef.current) {
+          colorInputRef.current.click();
+        }
+      }, 100);
     }
   };
   
@@ -219,10 +226,32 @@ const ColorPaletteComponent = ({ initialPalettes, onChange }: ColorPaletteProps)
               <motion.div
                 className="w-12 h-12 rounded-md cursor-pointer shadow-sm relative overflow-hidden flex items-end justify-center"
                 style={{ backgroundColor: color }}
-                onClick={() => setColorPickerOpen(prev => prev === index ? null : index)}
+                onClick={() => {
+                  if (!isLiveMode) {
+                    setEditingColorIndex(index);
+                    setTimeout(() => {
+                      if (colorInputRef.current) {
+                        colorInputRef.current.click();
+                      }
+                    }, 50);
+                  }
+                }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
               >
+                {editingColorIndex === index && (
+                  <input 
+                    ref={colorInputRef}
+                    type="color" 
+                    value={color}
+                    onChange={(e) => {
+                      updateColor(index, e.target.value);
+                    }}
+                    onBlur={() => setEditingColorIndex(null)}
+                    className="absolute opacity-0"
+                    aria-label={`Cambiar color ${index + 1}`}
+                  />
+                )}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 bg-black/20 w-full flex justify-center backdrop-blur-sm">
                   <span className="text-[10px] text-white/90 uppercase tracking-wider">
                     {color.replace('#', '')}
@@ -242,24 +271,6 @@ const ColorPaletteComponent = ({ initialPalettes, onChange }: ColorPaletteProps)
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </motion.button>
-              )}
-              
-              {/* Selector de color */}
-              {colorPickerOpen === index && (
-                <motion.div 
-                  className="absolute top-full mt-2 z-10 bg-white dark:bg-gray-800 rounded-md shadow-md p-3 border border-gray-100 dark:border-gray-700"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <input 
-                    type="color" 
-                    value={color}
-                    onChange={(e) => updateColor(index, e.target.value)}
-                    className="w-full h-6 rounded cursor-pointer"
-                  />
-                </motion.div>
               )}
             </motion.div>
           ))}

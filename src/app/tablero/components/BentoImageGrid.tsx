@@ -43,11 +43,13 @@ const BentoImageGrid = ({
 
   // Determinar layout para una imagen
   const getLayout = (index: number): ImageLayout => {
+    // Si ya existe un layout guardado para esta imagen, usarlo
     if (imageLayouts.has(index)) {
       return imageLayouts.get(index)!;
     }
-    const patterns: ImageLayout[] = ["square", "vertical", "horizontal", "square", "horizontal", "vertical"];
-    return patterns[index % patterns.length];
+    
+    // Por defecto, usamos siempre el layout vertical para nuevas imágenes
+    return "vertical";
   };
 
   // Función para manejar archivos soltados (mantenemos solo esta funcionalidad)

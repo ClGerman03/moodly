@@ -8,8 +8,8 @@ export default function Home() {
         {/* Imagen sin fondo circular */}
         <div className="relative w-44 h-44 mb-4 overflow-hidden transition-transform duration-700 hover:scale-105">
           <Image
-            src="/images/moodly inicio.png"
-            alt="Moodly Logo"
+            src="/images/Moodly-inicio.png"
+            alt="Moodly-Logo"
             fill
             className="object-contain"
             priority

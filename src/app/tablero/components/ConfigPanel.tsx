@@ -80,28 +80,33 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   
   return (
     <div className="flex flex-row items-center">
-      {/* Botón de exportar a PDF */}
-      <ConfigButton 
-        icon={<LucideFileText className="w-5 h-5" strokeWidth={1} />}
-        onClick={handleOpenPdfPopup}
-      />
-      
-      {/* Botón de compartir con texto */}
-      <ShareButton onClick={handleOpenSharePopup} />
-      
-      {/* Botón de modo live */}
+      {/* Botón de modo live - siempre visible */}
       <ConfigButton 
         icon={<LucideEye className="w-5 h-5" strokeWidth={1} />}
         onClick={onToggleLiveMode}
         active={isLiveMode}
       />
       
-      {/* Botón de configuración (último a la derecha) */}
-      <div className="ml-auto">
-        <ConfigButton 
-          icon={<LucideSettings className="w-5 h-5" strokeWidth={1} />}
-        />
-      </div>
+      {/* Resto de botones - solo visibles cuando NO está en modo live */}
+      {!isLiveMode && (
+        <>
+          {/* Botón de exportar a PDF */}
+          <ConfigButton 
+            icon={<LucideFileText className="w-5 h-5" strokeWidth={1} />}
+            onClick={handleOpenPdfPopup}
+          />
+          
+          {/* Botón de compartir con texto */}
+          <ShareButton onClick={handleOpenSharePopup} />
+          
+          {/* Botón de configuración (último a la derecha) */}
+          <div className="ml-auto">
+            <ConfigButton 
+              icon={<LucideSettings className="w-5 h-5" strokeWidth={1} />}
+            />
+          </div>
+        </>
+      )}
       
       {/* Popup de compartir */}
       <SharePopup 

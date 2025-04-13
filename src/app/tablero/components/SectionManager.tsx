@@ -6,8 +6,9 @@ import BentoImageGrid, { ImageLayout } from './BentoImageGrid';
 import ColorPaletteComponent from './ColorPalette';
 import LinkSection from './LinkSection';
 import TypographySection from './TypographySection';
+import TextSection from './TextSection';
 import AddSection from './AddSection';
-import { SectionType, ColorPalette, LinkItem, ImageMetadata, FontOption } from '../types';
+import { SectionType, ColorPalette, LinkItem, ImageMetadata, FontOption, TextContent } from '../types';
 
 // Usando los tipos importados desde ../types
 
@@ -23,6 +24,7 @@ interface Section {
     imageMetadata?: { [key: string]: ImageMetadata };
     links?: LinkItem[];
     fonts?: FontOption[];
+    textContent?: TextContent;
   };
 }
 
@@ -46,15 +48,27 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
     // Asignar titulo predeterminado segun el tipo
     const defaultTitle = type === "bento" ? "Bento Images" : 
                      type === "palette" ? "Color Palette" : 
-                     type === "typography" ? "Tipografía" : "Enlaces";
+                     type === "typography" ? "Tipografía" : 
+                     type === "text" ? "Texto" : "Enlaces";
+    
+    // Preparar datos iniciales según el tipo de sección
+    let initialData: any = {};
+    
+    if (type === "bento") {
+      initialData = { images: [], imageLayouts: {}, imageMetadata: {} };
+    } else if (type === "links") {
+      initialData = { links: [] };
+    } else if (type === "typography") {
+      initialData = { fonts: [] };
+    } else if (type === "text") {
+      initialData = { textContent: { title: "", subtitle: "", size: "medium" } };
+    }
     
     const newSection: Section = {
       id: `section-${Date.now()}`,
       type,
       title: defaultTitle,
-      data: type === "bento" ? { images: [], imageLayouts: {}, imageMetadata: {} } : 
-            type === "links" ? { links: [] } : 
-            type === "typography" ? { fonts: [] } : {}
+      data: initialData
     };
     
     setSections([...sections, newSection]);
@@ -300,6 +314,23 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
             />
           </motion.div>
         );
+      case "text":
+        return (
+          <motion.div 
+            key={section.id} 
+            className="my-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <TextSection 
+              initialText={section.data?.textContent} 
+              onChange={(textContent) => updateSectionData(section.id, { textContent })}
+              isLiveMode={isLiveMode}
+            />
+          </motion.div>
+        );
       default:
         return null;
     }
@@ -313,7 +344,6 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
       {!isLiveMode && (
         <AddSection 
           onAddSection={handleAddSection} 
-          existingTypes={getExistingSectionTypes()}
         />
       )}
     </div>
