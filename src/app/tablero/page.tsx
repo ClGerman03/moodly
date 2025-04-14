@@ -19,13 +19,17 @@ export default function Tablero() {
   const { user, isLoading } = useAuth();
   
   // Efecto para manejar el estado inicial según si el usuario está autenticado
+  // Se ejecuta cuando isLoading cambia de true a false
   useEffect(() => {
     // Solo realizar acciones después de que se haya cargado el estado de autenticación
     if (!isLoading) {
-      // Si el usuario está autenticado, podríamos cargar sus tableros o realizar otras acciones
-      console.log("Estado de autenticación cargado", user ? "Usuario autenticado" : "Usuario no autenticado");
+      // Opcional: pre-configurar el tablero si el usuario está autenticado
+      if (user && !isNameSet && boardName === "") {
+        // Aquí podríamos establecer un nombre predeterminado o cargar el último tablero
+        // (Por ahora no implementamos ninguna acción específica)
+      }
     }
-  }, [isLoading, user]);
+  }, [isLoading, user, isNameSet, boardName]); // Incluimos todas las dependencias utilizadas
 
   // Manejar la configuración del nombre del tablero
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -70,23 +74,24 @@ export default function Tablero() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
-            <h1 className="mb-8 text-2xl font-light text-gray-800 tracking-wide">
+            <h1 className="mb-6 text-2xl font-light text-gray-800 tracking-wide">
               ¿Cómo se llamará tu tablero?
             </h1>
-            <form onSubmit={handleNameSubmit} className="w-full space-y-6">
+            <form onSubmit={handleNameSubmit} className="w-full space-y-4">
               <div className="relative w-full">
                 <input
                   type="text"
                   value={boardName}
                   onChange={(e) => setBoardName(e.target.value)}
                   placeholder="Escribe un nombre"
-                  className="w-full py-3 text-xl text-center text-gray-700 placeholder-gray-400/60 bg-transparent border-b-2 border-gray-200 focus:outline-none focus:border-gray-400 transition-all duration-300"
+                  className="w-full py-2 text-xl text-center text-gray-700 placeholder-gray-300/70 bg-transparent outline-none focus:outline-none focus:ring-0 focus:shadow-none transition-all duration-300"
                   autoFocus
+                  style={{ outline: 'none' }}
                 />
               </div>
               <button
                 type="submit"
-                className="w-full max-w-xs mx-auto px-4 py-2 mt-8 font-medium text-white transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transform hover:scale-102 opacity-90 hover:opacity-100 flex items-center justify-center"
+                className="w-auto px-5 py-1.5 mt-4 text-sm font-medium text-white transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transform hover:scale-102 opacity-90 hover:opacity-100 flex items-center justify-center mx-auto"
               >
                 Comenzar
               </button>

@@ -10,7 +10,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import { Database } from '@/types/supabase'
 
 // Tipo para el perfil de usuario
@@ -36,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<ProfileType | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const router = useRouter()
 
   // Función para obtener el perfil del usuario
   const refreshProfile = useCallback(async () => {
@@ -61,7 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: 'select_account' // Forzar la pantalla de selección de cuentas de Google
+          }
         }
       })
       
@@ -76,68 +77,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Cerrar sesión
   const signOut = async () => {
     try {
-      // Utilizar scope 'global' para cerrar todas las sesiones en todos los dispositivos
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Solo limpiar el estado local y redirigir después de un cierre de sesión exitoso
+      // Limpiar el estado local inmediatamente para feedback instantáneo
       setUser(null);
       setProfile(null);
       setSession(null);
       
-      // Pequeño retraso para asegurar que los eventos de auth se propaguen correctamente
-      setTimeout(() => {
-        router.push('/');
-        router.refresh(); // Forzar actualización completa de la página
-      }, 100);
+      // Cerrar sesión en Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      // Redireccionar a la página principal
+      window.location.href = '/?logout=true';
+      
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
-      // Notificar al usuario sobre el error (podríamos añadir un toast o alerta aquí)
+      setIsLoading(false); // Restablecer el estado de carga en caso de error
+      throw error; // Re-lanzar el error para manejo externo
     }
   }
 
   // Efecto para escuchar cambios en la autenticación
   useEffect(() => {
-    setIsLoading(true)
+    let isMounted = true;
+    setIsLoading(true);
     
     // Obtener el estado de sesión inicial
     const fetchInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession()
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      
+      // Verificar que el componente aún esté montado antes de actualizar el estado
+      if (!isMounted) return;
       
       if (initialSession) {
-        setSession(initialSession)
-        setUser(initialSession.user)
-        await refreshProfile()
+        setSession(initialSession);
+        setUser(initialSession.user);
+        
+        // Solo obtener el perfil si tenemos un usuario y no lo hemos cargado aún
+        if (initialSession.user && !profile) {
+          await refreshProfile();
+        }
       }
       
-      setIsLoading(false)
-    }
+      setIsLoading(false);
+    };
     
-    fetchInitialSession()
+    fetchInitialSession();
     
     // Suscribirse a los cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        setSession(newSession)
-        setUser(newSession?.user || null)
+      async (event, newSession) => {
+        // Verificar que el componente aún esté montado antes de actualizar el estado
+        if (!isMounted) return;
         
-        if (newSession?.user) {
-          await refreshProfile()
+        // Actualizar estado solo si hay un cambio real en la sesión o usuario
+        const newUser = newSession?.user || null;
+        const shouldUpdateUser = (
+          (user === null && newUser !== null) ||
+          (user !== null && newUser === null) ||
+          (user?.id !== newUser?.id)
+        );
+        
+        if (shouldUpdateUser) {
+          setSession(newSession);
+          setUser(newUser);
+          
+          // Solo obtener el perfil si tenemos un usuario nuevo
+          if (newUser && event !== 'TOKEN_REFRESHED') {
+            await refreshProfile();
+          }
+          
+          // Solo refrescar la página en eventos específicos que lo requieran
+          // como SIGNED_IN o SIGNED_OUT, pero NO en cada cambio de estado
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            // No llamar a router.refresh() aquí para evitar bucles infinitos
+            // En su lugar, solo hacemos navegación puntual cuando realmente hace falta
+          }
         }
-        
-        // Refrescar la página para obtener los datos más recientes
-        router.refresh()
       }
-    )
+    );
     
-    // Limpiar suscripción al desmontar
+    // Limpiar suscripción al desmontar y marcar componente como desmontado
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [router, refreshProfile])
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [user, profile, refreshProfile])
 
   // Valor del contexto
   const value = {

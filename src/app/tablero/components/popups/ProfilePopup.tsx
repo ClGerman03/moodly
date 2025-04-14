@@ -81,7 +81,10 @@ export default function ProfilePopup({
         
         {user && (
           <button
-            onClick={onSignOut}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSignOut();
+            }}
             disabled={isSigningOut}
             className={`w-full flex items-center space-x-2 text-xs font-light text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 p-1.5 rounded-md transition-colors ${
               isSigningOut ? 'opacity-70 cursor-not-allowed' : ''
