@@ -55,6 +55,8 @@ const BentoImageGrid = ({
   const [isDetailPopupOpen, setIsDetailPopupOpen] = useState<boolean>(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
   const [imageBlocksMap, setImageBlocksMap] = useState<Map<string, ImageBlockType>>(new Map());
+  const [tappedImageId, setTappedImageId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   // Referencia al contenedor de la cuadrícula
   const gridRef = useRef<HTMLDivElement>(null);
@@ -90,6 +92,9 @@ const BentoImageGrid = ({
           // Actualizar el número de columnas según el ancho
           const newCols = calculateColumns(newWidth);
           setGridCols(newCols);
+          
+          // Detectar si estamos en un dispositivo móvil basado en el ancho
+          setIsMobile(newWidth < 640);
         }
       };
       
@@ -351,6 +356,20 @@ const BentoImageGrid = ({
   const handleImageClick = (id: string, e: React.MouseEvent) => {
     if (e.target instanceof HTMLButtonElement) return;
     
+    // En dispositivos móviles, alternar la selección para mostrar controles
+    if (isMobile && !isLiveMode) {
+      if (tappedImageId === id) {
+        // Si la imagen ya estaba seleccionada, no hacemos nada
+        // Los controles ya están visibles y el usuario puede usar los botones
+        return;
+      } else {
+        // Seleccionamos esta imagen y limpiamos cualquier selección anterior
+        setTappedImageId(id);
+        return;
+      }
+    }
+    
+    // Comportamiento normal en desktop: abrir el popup directamente
     const block = imageBlocksMap.get(id);
     if (!block) return;
     
@@ -358,6 +377,19 @@ const BentoImageGrid = ({
     if (index !== -1) {
       setSelectedImageIndex(index);
       setIsDetailPopupOpen(true);
+    }
+  };
+  
+  // Manejar la apertura del popup de detalles (para el botón en móviles)
+  const handleOpenDetails = (id: string) => {
+    const block = imageBlocksMap.get(id);
+    if (!block) return;
+    
+    const index = images.findIndex(url => url === block.url);
+    if (index !== -1) {
+      setSelectedImageIndex(index);
+      setIsDetailPopupOpen(true);
+      setTappedImageId(null); // Limpiar la selección al abrir detalles
     }
   };
   
@@ -406,6 +438,12 @@ const BentoImageGrid = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
+      onClick={(e) => {
+        // Cerrar cualquier imagen seleccionada si se hace clic fuera
+        if (e.target === e.currentTarget && tappedImageId) {
+          setTappedImageId(null);
+        }
+      }}
     >
       <div 
         ref={gridRef}
@@ -424,7 +462,7 @@ const BentoImageGrid = ({
             onLayoutChange={handleLayoutChange}
             isDraggable={!isLiveMode}
             isResizable={false}
-            compactType={"horizontal"}
+            compactType={isMobile ? "vertical" : "horizontal"}
             useCSSTransforms={true}
             preventCollision={false}
             style={{ position: 'relative' }}
@@ -441,7 +479,7 @@ const BentoImageGrid = ({
                 <div 
                   key={item.i} 
                   className={`relative overflow-hidden rounded-xl shadow-md transition-all duration-150 ${
-                    isHovered ? 'ring-2 ring-offset-2 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900' : ''
+                    isHovered || tappedImageId === block.id ? 'ring-2 ring-offset-2 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900' : ''
                   }`}
                   onMouseEnter={() => setHoveredImage(block.id)}
                   onMouseLeave={() => setHoveredImage(null)}
@@ -459,8 +497,8 @@ const BentoImageGrid = ({
                     />
                   </div>
                   
-                  {/* Controles que aparecen al hacer hover */}
-                  {isHovered && !isLiveMode && (
+                  {/* Controles que aparecen al hacer hover o tap (móvil) */}
+                  {(isHovered || tappedImageId === block.id) && !isLiveMode && (
                     <AnimatePresence>
                       {/* Indicador de arrastre */}
                       <motion.div
@@ -534,6 +572,19 @@ const BentoImageGrid = ({
                             <rect x="3" y="6" width="18" height="12" rx="1" />
                           </svg>
                         </button>
+                        {/* Botón para ver detalles (solo visible en móviles) */}
+                        {isMobile && (
+                          <button
+                            onClick={() => handleOpenDetails(block.id)}
+                            className="w-6 h-6 rounded-md flex items-center justify-center text-white/80 hover:bg-white/20"
+                            title="Ver detalles"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                        )}
                       </motion.div>
                     </AnimatePresence>
                   )}

@@ -92,7 +92,6 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [editingTitle, setEditingTitle] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -104,27 +103,9 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     extensions: [StarterKit],
     content: initialDescription,
     onUpdate: ({ editor }) => {
-      // Indicar que el usuario está escribiendo activamente
-      setIsTyping(true);
-      
-      // Actualizar el estado local sin guardar inmediatamente
+      // Solo actualizar el estado local sin guardar
       const html = editor.getHTML();
       setDescription(html);
-      
-      // Resetear el temporizador de escritura
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-        
-        // Sólo programar el guardado cuando el usuario deja de escribir
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => {
-          // Solo guardar si realmente cambió el contenido
-          if (html !== initialDescription) {
-            onSave(title, html);
-          }
-        }, 500);
-      }, 800); // Tiempo para considerar que el usuario dejó de escribir
     },
     editorProps: {
       attributes: {
@@ -183,23 +164,21 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
 
   // Memoizamos handleClose para evitar recreaciones innecesarias
   const handleClose = useCallback(() => {
-    // Forzar guardado al cerrar si hay cambios, independientemente de si está escribiendo
-    if (title !== initialTitle || description !== initialDescription) {
-      // Limpiar cualquier temporizador pendiente
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      onSave(title, description);
+    // Al cerrar, no guardamos los cambios
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
     }
 
     // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
     if (historyStateAdded && typeof window !== 'undefined') {
-      // Desactivamos temporalmente nuestro propio listener para evitar bucles
-      setHistoryStateAdded(false);
       window.history.back();
     }
     
     onClose();
-  }, [title, description, initialTitle, initialDescription, onSave, onClose, historyStateAdded]);
+  }, [onClose, historyStateAdded]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -227,9 +206,6 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     };
   }, [isOpen, handleClose]);
 
-  // Referencias para evitar bucles infinitos
-  const prevImageUrlRef = useRef<string>(imageUrl);
-  
   // Manejar el evento popstate (botón atrás del navegador)
   useEffect(() => {
     const handlePopState = () => {
@@ -254,35 +230,6 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
       }
     };
   }, [isOpen, historyStateAdded, handleClose]);
-
-  useEffect(() => {
-    // Función para guardar los cambios pendientes
-    const saveChanges = () => {
-      // No guardar si el usuario está escribiendo activamente
-      if (!isTyping && (title !== initialTitle || description !== initialDescription)) {
-        onSave(title, description);
-      }
-    };
-    
-    // Solo guardar cuando cambia la imagen, no en cada renderizado
-    if (isOpen && prevImageUrlRef.current !== imageUrl && prevImageUrlRef.current !== '') {
-      saveChanges();
-    }
-    
-    // Actualizar la referencia para la próxima vez
-    prevImageUrlRef.current = imageUrl;
-    
-    // Cleanup cuando se desmonta el componente
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        saveChanges();
-      }
-    };
-    // Nota: Intencionalmente omitimos algunas dependencias para evitar efectos secundarios
-    // Esto es un patrón común en casos donde solo queremos responder a cambios específicos
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageUrl, title, description, initialTitle, initialDescription, onSave, isOpen]);
 
   // If not open, don't render anything
   if (!isOpen) return null;
