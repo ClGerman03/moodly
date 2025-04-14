@@ -295,15 +295,14 @@ const TypographySection: React.FC<TypographySectionProps> = ({
 
       {/* Botón para agregar tipografías - oculto en modo live */}
       {!isLiveMode && (
-        <motion.button
+        <motion.button 
           onClick={openAddFontDialog}
+          className="px-3 py-2 text-sm font-light text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center transition-colors duration-200 mb-6 self-end"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="mt-2 mb-6 px-4 py-2 text-xs font-light bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center transition-all duration-200 self-end"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
-            <path d="M4 20h16" />
-            <path d="M12 4v16" />
+            <path d="M12 5v14M5 12h14" />
           </svg>
           Agregar tipografía
         </motion.button>
@@ -423,8 +422,12 @@ const TypographySection: React.FC<TypographySectionProps> = ({
               className="bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Agregar tipografía</h3>
+              <div className="flex justify-between items-center mb-6">
+                <motion.h2 
+                  className="text-xl font-light text-gray-700 dark:text-gray-300 group"
+                >
+                  Agregar tipografía
+                </motion.h2>
                 <button 
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                   onClick={closeAddFontDialog}
@@ -436,27 +439,32 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                 </button>
               </div>
               
-              {/* Buscador */}
-              <div className="relative mb-6">
-                <input
-                  type="text"
-                  placeholder="Buscar tipografía..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                />
-                {searchQuery && (
-                  <button
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    onClick={() => setSearchQuery("")}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="15" y1="9" x2="9" y2="15"></line>
-                      <line x1="9" y1="9" x2="15" y2="15"></line>
-                    </svg>
-                  </button>
-                )}
+              {/* Buscador - Estilo minimalista */}
+              <div className="relative mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 mr-2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Buscar tipografía..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full py-1 bg-transparent border-none focus:outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-2"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
               
               {/* Lista de fuentes filtradas */}

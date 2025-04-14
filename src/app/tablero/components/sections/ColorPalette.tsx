@@ -179,21 +179,23 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
           
           {/* Controles de paleta */}
           <div className="flex space-x-1">
-            {/* Botón para agregar paleta */}
-            <motion.button 
-              onClick={addPalette} 
-              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              aria-label="Agregar paleta"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-              </svg>
-            </motion.button>
+            {/* Botón para agregar paleta - oculto en modo live */}
+            {!isLiveMode && (
+              <motion.button 
+                onClick={addPalette} 
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label="Agregar paleta"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                </svg>
+              </motion.button>
+            )}
             
-            {/* Botón para eliminar paleta (solo si hay más de una) */}
-            {palettes.length > 1 && (
+            {/* Botón para eliminar paleta (solo si hay más de una) - oculto en modo live */}
+            {palettes.length > 1 && !isLiveMode && (
               <motion.button 
                 onClick={removePalette} 
                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
@@ -259,8 +261,8 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                 </div>
               </motion.div>
               
-              {/* Botón eliminar */}
-              {activePalette.colors.length > 1 && (
+              {/* Botón eliminar - oculto en modo live */}
+              {activePalette.colors.length > 1 && !isLiveMode && (
                 <motion.button
                   className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white dark:bg-gray-800 shadow flex items-center justify-center text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   onClick={() => removeColor(index)}
@@ -275,8 +277,8 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
             </motion.div>
           ))}
           
-          {/* Botón para agregar color */}
-          {activePalette.colors.length < 8 && (
+          {/* Botón para agregar color - oculto en modo live */}
+          {activePalette.colors.length < 8 && !isLiveMode && (
             <motion.div 
               className="w-12 h-12 rounded-md border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center cursor-pointer"
               onClick={addColor}

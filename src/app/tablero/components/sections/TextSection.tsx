@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TextContent, TextSize } from "../../types";
 
 interface TextSectionProps {
@@ -15,8 +15,20 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
   const [size, setSize] = useState<TextSize>(initialText?.size || "medium");
 
   // Sincronizar con el estado padre cuando cambia el texto
+  // Usamos una referencia para evitar renderizados innecesarios
+  const prevTextRef = useRef<{title: string, subtitle: string, size: TextSize}>();
+  
   useEffect(() => {
-    if (onChange) {
+    // Solo actualizar si hay cambios significativos
+    const hasChanged = !prevTextRef.current || 
+      prevTextRef.current.title !== title || 
+      prevTextRef.current.subtitle !== subtitle || 
+      prevTextRef.current.size !== size;
+    
+    if (onChange && hasChanged) {
+      // Guardamos el valor actual para comparar en futuras actualizaciones
+      prevTextRef.current = {title, subtitle, size};
+      
       const textContent: TextContent = {
         title,
         subtitle,

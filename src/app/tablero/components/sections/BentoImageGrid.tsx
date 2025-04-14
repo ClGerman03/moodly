@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent, useRef, useEffect } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import ImageDetailPopup from "../popups/ImageDetailPopup";
 import { BentoImageGridProps, ImageBlock as ImageBlockType, ImageLayout } from "./types/bento";
@@ -16,12 +16,13 @@ import "react-resizable/css/styles.css";
 const MARGIN: [number, number] = [20, 20];
 const ROW_HEIGHT = 160;
 
-// Dimensiones por tipo de layout
+// Dimensiones para cada tipo de layout de imagen
+// Ajustando los tamaños para optimizar el espacio y evitar colapsos
 const LAYOUT_DIMENSIONS = {
-  square: { w: 1, h: 1 },
-  vertical: { w: 1, h: 2 },
-  horizontal: { w: 2, h: 1 }
-};
+  square: { w: 1, h: 1 },       // Mantiene 1x1
+  vertical: { w: 1, h: 2 },     // Mantiene 1x2 
+  horizontal: { w: 2, h: 1 }    // Mantiene 2x1
+} as const;
 
 // Interfaz para los items de layout
 interface LayoutItem {
@@ -57,9 +58,22 @@ const BentoImageGrid = ({
 
   // Referencia al contenedor de la cuadrícula
   const gridRef = useRef<HTMLDivElement>(null);
+  // Referencia para el timeout de actualización del layout
+  const layoutUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Número de columnas en el grid
-  const gridCols = 4;
+  // Número de columnas en el grid - Adaptativo según tamaño de pantalla
+  const [gridCols, setGridCols] = useState(4);
+  
+  // Función para calcular el número de columnas según el ancho del contenedor
+  const calculateColumns = (width: number) => {
+    if (width < 640) { // Móviles
+      return 1;
+    } else if (width < 960) { // Tablets
+      return 2;
+    } else { // Desktop
+      return 4;
+    }
+  };
   
   // Estado para almacenar el ancho del contenedor
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -67,10 +81,15 @@ const BentoImageGrid = ({
   // Efecto para medir el ancho del contenedor y responder a cambios de tamaño
   useEffect(() => {
     if (gridRef.current) {
-      // Función para actualizar el ancho
+      // Función para actualizar el ancho y el número de columnas
       const updateWidth = () => {
         if (gridRef.current) {
-          setContainerWidth(gridRef.current.offsetWidth);
+          const newWidth = gridRef.current.offsetWidth;
+          setContainerWidth(newWidth);
+          
+          // Actualizar el número de columnas según el ancho
+          const newCols = calculateColumns(newWidth);
+          setGridCols(newCols);
         }
       };
       
@@ -92,44 +111,108 @@ const BentoImageGrid = ({
     }
   }, []);
   
-  // Efecto para inicializar el layout basado en las imágenes proporcionadas
-  useEffect(() => {
-    if (images.length > 0) {
-      const newLayout: LayoutItem[] = [];
-      const newBlocksMap = new Map<string, ImageBlockType>();
-      
-      // Crear elementos de layout para cada imagen
-      images.forEach((url, index) => {
-        const layout = imageLayouts.get(index) || "vertical";
-        const { w, h } = LAYOUT_DIMENSIONS[layout];
-        const id = `image-${index}`;
-        
-        // Añadir al layout de react-grid-layout
-        newLayout.push({
-          i: id,
-          x: (index % gridCols) * w > (gridCols - w) ? 0 : (index % gridCols) * w, // Evitar que sobresalga
-          y: Math.floor(index / gridCols) * h,
-          w,
-          h,
-        });
-        
-        // Guardar información del bloque
-        newBlocksMap.set(id, {
-          id,
-          url,
-          layout: layout as ImageLayout,
-          metadata: imageMetadata.get(url) || undefined
-        });
-      });
-      
-      setLayout(newLayout);
-      setImageBlocksMap(newBlocksMap);
-    } else {
+  // Función para recalcular el layout completo
+  const recalculateLayout = useCallback(() => {
+    if (!images || images.length === 0) {
       setLayout([]);
       setImageBlocksMap(new Map());
+      return;
     }
-  }, [images, imageLayouts, imageMetadata]);
-
+    
+    const initialLayout: LayoutItem[] = [];
+    const blocksMap = new Map<string, ImageBlockType>();
+    
+    // Usa una cuadrícula temporal para el nuevo cálculo
+    const tempGrid: boolean[][] = Array(20).fill(null).map(() => Array(gridCols).fill(false));
+    
+    // Función para encontrar posición disponible
+    const findAvailablePos = (w: number, h: number): [number, number] => {
+      // Ajustar el ancho máximo al número de columnas disponibles
+      const adjustedW = Math.min(w, gridCols);
+      
+      for (let y = 0; y < tempGrid.length; y++) {
+        for (let x = 0; x < gridCols; x++) {
+          // Verificar si hay espacio para este elemento
+          let canPlace = true;
+          for (let i = y; i < y + h && canPlace; i++) {
+            for (let j = x; j < x + adjustedW && canPlace; j++) {
+              if (i >= tempGrid.length || j >= gridCols || tempGrid[i][j]) {
+                canPlace = false;
+              }
+            }
+          }
+          
+          if (canPlace) {
+            // Marcar como ocupado
+            for (let i = y; i < y + h; i++) {
+              for (let j = x; j < x + adjustedW; j++) {
+                if (i < tempGrid.length && j < gridCols) {
+                  tempGrid[i][j] = true;
+                }
+              }
+            }
+            return [x, y];
+          }
+        }
+      }
+      return [0, tempGrid.length]; // Si no hay espacio, colocar al final
+    };
+    
+    images.forEach((url, index) => {
+      const layoutType = imageLayouts?.get(index) || 'square';
+      const id = `image-${index}-${Date.now().toString(36)}`;
+      
+      // Obtener dimensiones según el tipo de layout
+      let { w, h } = LAYOUT_DIMENSIONS[layoutType];
+      
+      // Si estamos en mobile (1 columna), ajustar los elementos horizontales
+      if (gridCols === 1 && layoutType === 'horizontal') {
+        w = 1; // Limitar a 1 columna en móvil
+        h = 1; // Mantener proporciones similares
+      }
+      
+      // Encontrar posición disponible
+      const [x, y] = findAvailablePos(w, h);
+      
+      const layoutItem: LayoutItem = {
+        i: id,
+        x,
+        y,
+        w: Math.min(w, gridCols), // Asegurarse de que no exceda el número de columnas
+        h,
+        static: false
+      };
+      
+      initialLayout.push(layoutItem);
+      
+      // Guardar información de cada bloque
+      blocksMap.set(id, {
+        id,
+        url,
+        layout: layoutType as ImageLayout,
+        metadata: imageMetadata.get(url) || undefined
+      });
+    });
+    
+    setLayout(initialLayout);
+    setImageBlocksMap(blocksMap);
+  }, [images, imageLayouts, imageMetadata, gridCols]);
+  
+  // Recalcular el layout cuando cambia el número de columnas
+  useEffect(() => {
+    if (images && images.length > 0 && containerWidth > 0) {
+      // Reiniciar el cálculo del layout cuando cambia el número de columnas
+      recalculateLayout();
+    }
+  }, [gridCols, images, containerWidth, recalculateLayout]);
+  
+  // Efecto para crear el layout inicial basado en imágenes y layoutType
+  useEffect(() => {
+    if (containerWidth > 0 && images && images.length > 0) {
+      recalculateLayout();
+    }
+  }, [images, imageLayouts, imageMetadata, containerWidth, recalculateLayout]); // Ya no depende de gridCols porque tenemos otro efecto para eso
+  
   // Manejar selección de archivos
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -200,20 +283,34 @@ const BentoImageGrid = ({
     // Actualizar el estado del layout
     setLayout(updatedLayout);
     
-    // Crear un nuevo orden de imágenes basado en el layout
-    const orderedImages = updatedLayout
-      .sort((a, b) => {
-        if (a.y !== b.y) return a.y - b.y;
-        return a.x - b.x;
-      })
-      .map(item => {
-        const block = imageBlocksMap.get(item.i);
-        return block ? block.url : "";
-      })
-      .filter(Boolean);
+    // Debounce con un delay más amplio para prevenir titileo y updates frecuentes
+    // Usando un identificador para cancelar actualizaciones previas pendientes
+    if (layoutUpdateTimeoutRef.current) {
+      clearTimeout(layoutUpdateTimeoutRef.current);
+    }
     
-    // Notificar el nuevo orden
-    onReorder(orderedImages);
+    layoutUpdateTimeoutRef.current = setTimeout(() => {
+      // Mejorado: utilizar un algoritmo más estable para ordenar las imágenes
+      // Ordenando primero por fila (y) y luego por columna (x)
+      const orderedImages = updatedLayout
+        .sort((a, b) => {
+          // Primero ordenar por filas
+          if (Math.floor(a.y) !== Math.floor(b.y)) {
+            return Math.floor(a.y) - Math.floor(b.y);
+          }
+          // Luego por columnas dentro de la misma fila
+          return a.x - b.x;
+        })
+        .map(item => {
+          const block = imageBlocksMap.get(item.i);
+          return block ? block.url : "";
+        })
+        .filter(Boolean);
+      
+      // Notificar el nuevo orden al componente padre
+      onReorder(orderedImages);
+      layoutUpdateTimeoutRef.current = null;
+    }, 300); // Aumentando el timeout para evitar actualizaciones demasiado frecuentes
   };
   
   // Manejar cambio de layout (tamaño) de un bloque
@@ -221,48 +318,33 @@ const BentoImageGrid = ({
     const blockInfo = imageBlocksMap.get(id);
     if (!blockInfo) return;
     
-    // Actualizar el tipo de layout en el mapa
-    const updatedBlock = { ...blockInfo, layout: newLayoutType };
-    const newBlocksMap = new Map(imageBlocksMap);
-    newBlocksMap.set(id, updatedBlock);
-    setImageBlocksMap(newBlocksMap);
-    
-    // Encontrar el elemento en el layout actual
-    const currentLayoutItem = layout.find(item => item.i === id);
-    if (!currentLayoutItem) return;
+    // Actualizar el tipo de layout en el mapa y notificar al padre
+    // antes de actualizar el estado local para evitar renderizados en cascada
+    const index = images.findIndex(url => url === blockInfo.url);
+    if (index !== -1 && typeof index === 'number') {
+      onExternalLayoutChange(index, newLayoutType);
+    }
     
     // Obtener nuevas dimensiones según el tipo de layout
     const { w, h } = LAYOUT_DIMENSIONS[newLayoutType];
     
-    // Verificar si hay espacio en la posición actual
-    // Si no hay espacio o causaría una colisión, React-Grid-Layout lo moverá automáticamente
+    // Actualizar todo en un solo batch para minimizar renderizados
+    // 1. Actualizar el bloque en el mapa
+    const updatedBlock = { ...blockInfo, layout: newLayoutType };
+    const newBlocksMap = new Map(imageBlocksMap);
+    newBlocksMap.set(id, updatedBlock);
+    
+    // 2. Crear el nuevo layout en una sola operación sin static:true
     const newLayout = layout.map(item => {
       if (item.i === id) {
-        return { 
-          ...item, 
-          w, 
-          h,
-          // La opción static:true hace que el elemento mantenga su posición
-          // incluso si causa una colisión; el resto de elementos se adaptarán
-          static: true 
-        };
+        return { ...item, w, h }; // Sin static:true para evitar el segundo renderizado
       }
-      return { ...item, static: false };
+      return item;
     });
     
-    // Aplicar el nuevo layout
+    // Actualizar ambos estados juntos para reducir renderizados
+    setImageBlocksMap(newBlocksMap);
     setLayout(newLayout);
-    
-    // Después de un breve tiempo, eliminar la propiedad 'static' para permitir el movimiento normal
-    setTimeout(() => {
-      setLayout(newLayout.map(item => ({ ...item, static: false })));
-    }, 50);
-    
-    // Notificar cambio al componente padre
-    const index = images.findIndex(url => url === blockInfo.url);
-    if (index !== -1) {
-      onExternalLayoutChange(index, newLayoutType);
-    }
   };
   
   // Manejar clic en imagen para ver detalles
@@ -320,7 +402,7 @@ const BentoImageGrid = ({
 
   return (
     <motion.div
-      className="w-full p-4 rounded-xl transition-colors duration-300 overflow-x-hidden"
+      className="w-full p-4 rounded-xl transition-colors duration-300 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -342,10 +424,11 @@ const BentoImageGrid = ({
             onLayoutChange={handleLayoutChange}
             isDraggable={!isLiveMode}
             isResizable={false}
-            compactType="vertical"
+            compactType={"horizontal"}
             useCSSTransforms={true}
             preventCollision={false}
             style={{ position: 'relative' }}
+            draggableHandle=".drag-handle"
             draggableCancel=".react-resizable-handle"
           >
             {layout.map((item) => {
@@ -359,12 +442,12 @@ const BentoImageGrid = ({
                   key={item.i} 
                   className={`relative overflow-hidden rounded-xl shadow-md transition-all duration-150 ${
                     isHovered ? 'ring-2 ring-offset-2 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900' : ''
-                  } ${!isLiveMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                  }`}
                   onMouseEnter={() => setHoveredImage(block.id)}
                   onMouseLeave={() => setHoveredImage(null)}
                 >
                   {/* Imagen */}
-                  <div className="w-full h-full relative" onClick={(e) => !isLiveMode && handleImageClick(block.id, e)}>
+                  <div className="w-full h-full relative cursor-pointer" onClick={(e) => handleImageClick(block.id, e)}>
                     <Image
                       src={block.url}
                       alt={block.metadata?.title || `Imagen`}
@@ -381,14 +464,14 @@ const BentoImageGrid = ({
                     <AnimatePresence>
                       {/* Indicador de arrastre */}
                       <motion.div
-                        className="absolute top-2 left-2 z-20"
+                        className="absolute top-2 left-2 z-20 cursor-move"
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.2 }}
                       >
                         <div
-                          className="bg-black/70 text-white p-1 rounded-full hover:bg-black/80 cursor-grab active:cursor-grabbing"
+                          className="bg-black/70 text-white p-1 rounded-full hover:bg-black/80 cursor-grab active:cursor-grabbing drag-handle"
                           title="Arrastra para mover esta imagen"
                           aria-label="Arrastrar imagen"
                         >
@@ -520,8 +603,13 @@ const BentoImageGrid = ({
         
         /* Estilos para mejorar la apariencia del grid */
         .react-grid-item {
-          transition: all 200ms ease;
+          transition: all 300ms ease;
           transition-property: left, top, width, height;
+        }
+        
+        .react-grid-item.cssTransforms {
+          transition-property: transform, width, height;
+          will-change: transform;
         }
         
         .react-grid-item.react-grid-placeholder {
@@ -532,6 +620,8 @@ const BentoImageGrid = ({
         .react-grid-item.react-draggable-dragging {
           z-index: 100;
           box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+          transition: none !important;
+          cursor: grabbing !important;
         }
       `}</style>
     </motion.div>
