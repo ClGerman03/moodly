@@ -8,14 +8,12 @@
  */
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import GoogleSignInButton from './GoogleSignInButton'
 
 export default function AuthForm() {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  const [error] = useState<string | null>(null)
   
   return (
     <div className="w-full max-w-md mx-auto space-y-8">

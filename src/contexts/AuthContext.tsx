@@ -7,7 +7,7 @@
  * del usuario en toda la aplicación, utilizando Supabase Auth.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   // Función para obtener el perfil del usuario
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (!user) return
     
     const { data, error } = await supabase
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else if (data) {
       setProfile(data)
     }
-  }
+  }, [user])
 
   // Iniciar sesión con Google
   const signInWithGoogle = async () => {
@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [router])
+  }, [router, refreshProfile])
 
   // Valor del contexto
   const value = {

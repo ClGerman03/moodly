@@ -5,7 +5,6 @@ import ConfigPanel from './components/ConfigPanel';
 import SectionManager from './components/SectionManager';
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 
 export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
@@ -18,7 +17,6 @@ export default function Tablero() {
   
   // Obtener el estado de autenticación
   const { user, isLoading } = useAuth();
-  const router = useRouter();
   
   // Efecto para manejar el estado inicial según si el usuario está autenticado
   useEffect(() => {
