@@ -163,134 +163,132 @@ const TypographySection: React.FC<TypographySectionProps> = ({
       {/* Controles principales */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="relative group">
-            <label htmlFor="preview-text" className="text-xs text-gray-500 dark:text-gray-400 mb-1 inline-block">
-              Texto de ejemplo:
-            </label>
-            <div className="relative">
-              <button
-                id="preview-text"
-                className="text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-lg py-1.5 px-3 w-48 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-700 transition-colors"
-                onClick={() => !isLiveMode && setIsExampleMenuOpen(!isExampleMenuOpen)}
-                disabled={isLiveMode}
-              >
-                <span className="truncate">
-                  {previewText === "The quick brown fox jumps over the lazy dog." && "Texto en inglés"}
-                  {previewText === "El veloz zorro marrón salta sobre el perro perezoso." && "Texto en español"}
-                  {previewText === "Lorem ipsum dolor sit amet, consectetur adipiscing elit." && "Lorem ipsum"}
-                  {previewText === "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789" && "Caracteres"}
-                </span>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="12" 
-                  height="12" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2"
-                  className={`ml-2 transition-transform ${isExampleMenuOpen ? 'rotate-180' : ''}`}
+        {!isLiveMode && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="relative group">
+              <label htmlFor="preview-text" className="text-xs text-gray-500 dark:text-gray-400 mb-1 inline-block">
+                Texto de ejemplo:
+              </label>
+              <div className="relative">
+                <button
+                  id="preview-text"
+                  className="text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-lg py-1.5 px-3 w-48 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-700 transition-colors"
+                  onClick={() => setIsExampleMenuOpen(!isExampleMenuOpen)}
                 >
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
-              
-              {/* Menú desplegable con bordes redondeados */}
-              <AnimatePresence>
-                {isExampleMenuOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700"
+                  <span className="truncate">
+                    {previewText === "The quick brown fox jumps over the lazy dog." && "Texto en inglés"}
+                    {previewText === "El veloz zorro marrón salta sobre el perro perezoso." && "Texto en español"}
+                    {previewText === "Lorem ipsum dolor sit amet, consectetur adipiscing elit." && "Lorem ipsum"}
+                    {previewText === "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789" && "Caracteres"}
+                  </span>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="12" 
+                    height="12" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                    className={`ml-2 transition-transform ${isExampleMenuOpen ? 'rotate-180' : ''}`}
                   >
-                    <ul className="py-1">
-                      <li>
-                        <button
-                          className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "The quick brown fox jumps over the lazy dog." ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
-                          onClick={() => {
-                            setPreviewText("The quick brown fox jumps over the lazy dog.");
-                            setIsExampleMenuOpen(false);
-                          }}
-                        >
-                          Texto en inglés
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "El veloz zorro marrón salta sobre el perro perezoso." ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
-                          onClick={() => {
-                            setPreviewText("El veloz zorro marrón salta sobre el perro perezoso.");
-                            setIsExampleMenuOpen(false);
-                          }}
-                        >
-                          Texto en español
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "Lorem ipsum dolor sit amet, consectetur adipiscing elit." ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
-                          onClick={() => {
-                            setPreviewText("Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
-                            setIsExampleMenuOpen(false);
-                          }}
-                        >
-                          Lorem ipsum
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789" ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
-                          onClick={() => {
-                            setPreviewText("ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789");
-                            setIsExampleMenuOpen(false);
-                          }}
-                        >
-                          Caracteres
-                        </button>
-                      </li>
-                    </ul>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                
+                {/* Menú desplegable con bordes redondeados */}
+                <AnimatePresence>
+                  {isExampleMenuOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700"
+                    >
+                      <ul className="py-1">
+                        <li>
+                          <button
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "The quick brown fox jumps over the lazy dog." ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
+                            onClick={() => {
+                              setPreviewText("The quick brown fox jumps over the lazy dog.");
+                              setIsExampleMenuOpen(false);
+                            }}
+                          >
+                            Texto en inglés
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "El veloz zorro marrón salta sobre el perro perezoso." ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
+                            onClick={() => {
+                              setPreviewText("El veloz zorro marrón salta sobre el perro perezoso.");
+                              setIsExampleMenuOpen(false);
+                            }}
+                          >
+                            Texto en español
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "Lorem ipsum dolor sit amet, consectetur adipiscing elit." ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
+                            onClick={() => {
+                              setPreviewText("Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
+                              setIsExampleMenuOpen(false);
+                            }}
+                          >
+                            Lorem ipsum
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${previewText === "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789" ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
+                            onClick={() => {
+                              setPreviewText("ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789");
+                              setIsExampleMenuOpen(false);
+                            }}
+                          >
+                            Caracteres
+                          </button>
+                        </li>
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+            <div className="relative group ml-3">
+              <label htmlFor="preview-size" className="text-xs text-gray-500 dark:text-gray-400 mb-1 inline-block">
+                Tamaño:
+              </label>
+               <div className="flex space-x-1 border border-gray-200 dark:border-gray-800 rounded-lg p-0.5">
+                <button
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    previewSize === "sm" ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                  onClick={() => setPreviewSize("sm")}
+                >
+                  S
+                </button>
+                <button
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    previewSize === "md" ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                  onClick={() => setPreviewSize("md")}
+                >
+                  M
+                </button>
+                <button
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    previewSize === "lg" ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                  onClick={() => setPreviewSize("lg")}
+                >
+                  L
+                </button>
+              </div>
             </div>
           </div>
-          <div className="relative group ml-3">
-            <label htmlFor="preview-size" className="text-xs text-gray-500 dark:text-gray-400 mb-1 inline-block">
-              Tamaño:
-            </label>
-             <div className="flex space-x-1 border border-gray-200 dark:border-gray-800 rounded-lg p-0.5">
-              <button
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                  previewSize === "sm" ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                } ${isLiveMode ? 'cursor-default' : ''}`}
-                onClick={() => !isLiveMode && setPreviewSize("sm")}
-                disabled={isLiveMode}
-              >
-                S
-              </button>
-              <button
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                  previewSize === "md" ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                } ${isLiveMode ? 'cursor-default' : ''}`}
-                onClick={() => !isLiveMode && setPreviewSize("md")}
-                disabled={isLiveMode}
-              >
-                M
-              </button>
-              <button
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                  previewSize === "lg" ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                } ${isLiveMode ? 'cursor-default' : ''}`}
-                onClick={() => !isLiveMode && setPreviewSize("lg")}
-                disabled={isLiveMode}
-              >
-                L
-              </button>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Botón para agregar tipografías - oculto en modo live */}

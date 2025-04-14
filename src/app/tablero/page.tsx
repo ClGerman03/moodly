@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import ConfigPanel from './components/ConfigPanel';
 import SectionManager from './components/SectionManager';
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
@@ -13,6 +15,19 @@ export default function Tablero() {
   const [showNameForm, setShowNameForm] = useState<boolean>(true);
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Obtener el estado de autenticación
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+  
+  // Efecto para manejar el estado inicial según si el usuario está autenticado
+  useEffect(() => {
+    // Solo realizar acciones después de que se haya cargado el estado de autenticación
+    if (!isLoading) {
+      // Si el usuario está autenticado, podríamos cargar sus tableros o realizar otras acciones
+      console.log("Estado de autenticación cargado", user ? "Usuario autenticado" : "Usuario no autenticado");
+    }
+  }, [isLoading, user]);
 
   // Manejar la configuración del nombre del tablero
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -91,7 +106,7 @@ export default function Tablero() {
             transition={{ duration: 2, ease: "easeInOut" }}
           >
             <h1 className="text-3xl font-light text-gray-800">
-              Bienvenido
+              {user ? `Bienvenido, ${user.email?.split('@')[0]}` : "Bienvenido"}
             </h1>
           </motion.div>
         )}

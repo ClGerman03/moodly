@@ -39,7 +39,9 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
   
   const [activePaletteIndex, setActivePaletteIndex] = useState<number>(0);
   const [editingColorIndex, setEditingColorIndex] = useState<number | null>(null);
+  const [temporaryColor, setTemporaryColor] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  const [isColorPickerLocked, setIsColorPickerLocked] = useState<boolean>(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
   
   // Obtener la paleta activa
@@ -227,15 +229,21 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
             >
               <motion.div
                 className="w-12 h-12 rounded-md cursor-pointer shadow-sm relative overflow-hidden flex items-end justify-center"
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: temporaryColor && editingColorIndex === index ? temporaryColor : color }}
                 onClick={() => {
-                  if (!isLiveMode) {
-                    setEditingColorIndex(index);
-                    setTimeout(() => {
-                      if (colorInputRef.current) {
-                        colorInputRef.current.click();
-                      }
-                    }, 50);
+                  if (!isLiveMode && !isColorPickerLocked) {
+                    // Si no estábamos editando este color, iniciamos la edición
+                    if (editingColorIndex !== index) {
+                      setEditingColorIndex(index);
+                      setTemporaryColor(color); // Inicializar el color temporal con el color actual
+                      setTimeout(() => {
+                        if (colorInputRef.current) {
+                          colorInputRef.current.click();
+                        }
+                      }, 50);
+                    } 
+                    // Si ya estábamos editando este color, no hacemos nada
+                    // ya que el onBlur del input se encargará de cerrar el selector
                   }
                 }}
                 whileHover={{ scale: 1.05 }}
@@ -245,18 +253,32 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                   <input 
                     ref={colorInputRef}
                     type="color" 
-                    value={color}
+                    value={temporaryColor || color}
                     onChange={(e) => {
-                      updateColor(index, e.target.value);
+                      // Solo actualizamos el color temporal durante la selección
+                      setTemporaryColor(e.target.value);
                     }}
-                    onBlur={() => setEditingColorIndex(null)}
+                    onBlur={() => {
+                      // Al perder el foco, aplicamos el cambio final si hay un color temporal
+                      if (temporaryColor) {
+                        updateColor(index, temporaryColor);
+                        setTemporaryColor(null);
+                      }
+                      setEditingColorIndex(null);
+                      
+                      // Bloqueamos brevemente el selector para evitar reaperturas inmediatas
+                      setIsColorPickerLocked(true);
+                      setTimeout(() => {
+                        setIsColorPickerLocked(false);
+                      }, 200); // 200ms debería ser suficiente para evitar la reapertura
+                    }}
                     className="absolute opacity-0"
                     aria-label={`Cambiar color ${index + 1}`}
                   />
                 )}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 bg-black/20 w-full flex justify-center backdrop-blur-sm">
                   <span className="text-[10px] text-white/90 uppercase tracking-wider">
-                    {color.replace('#', '')}
+                    {(temporaryColor && editingColorIndex === index) ? temporaryColor.replace('#', '') : color.replace('#', '')}
                   </span>
                 </div>
               </motion.div>
