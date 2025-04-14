@@ -8,13 +8,7 @@
   --background-end-rgb: 255, 255, 255;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 245, 245, 245;
-    --background-start-rgb: 17, 17, 27; /* Gris oscuro */
-    --background-end-rgb: 17, 17, 27;
-  }
-}
+/* Se elimina la media query para modo oscuro para mantener siempre el tema claro */
 
 body {
   color: rgb(var(--foreground-rgb));

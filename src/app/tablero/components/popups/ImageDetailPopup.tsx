@@ -92,23 +92,39 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [historyStateAdded, setHistoryStateAdded] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Configuración del editor de texto enriquecido
   const editor = useEditor({
     extensions: [StarterKit],
     content: initialDescription,
     onUpdate: ({ editor }) => {
+      // Indicar que el usuario está escribiendo activamente
+      setIsTyping(true);
+      
+      // Actualizar el estado local sin guardar inmediatamente
       const html = editor.getHTML();
       setDescription(html);
       
-      // Autoguardado mientras escribe
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        onSave(title, html);
-      }, 1000);
+      // Resetear el temporizador de escritura
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        
+        // Sólo programar el guardado cuando el usuario deja de escribir
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+          // Solo guardar si realmente cambió el contenido
+          if (html !== initialDescription) {
+            onSave(title, html);
+          }
+        }, 500);
+      }, 800); // Tiempo para considerar que el usuario dejó de escribir
     },
     editorProps: {
       attributes: {
@@ -117,23 +133,30 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     },
   });
 
-  // Manejar cambios en el estado del popup o la imagen
+  // Manejar cambios cuando se activa/desactiva el modo live
   useEffect(() => {
     if (editor) {
       editor.setEditable(!isLiveMode);
     }
   }, [editor, isLiveMode]);
 
+  // Manejar cambios en el estado del popup o la imagen
   useEffect(() => {
-    // Solo ejecutar cuando el popup está abierto
     if (!isOpen) return;
     
-    // Resetear los valores con los específicos de la imagen actual
-    setTitle(initialTitle);
+    // Cuando el popup se abre, configuramos el editor con los valores iniciales
+    setTitle(initialTitle || "");
     
     // Actualizar el contenido del editor si está disponible
     if (editor && editor.commands) {
       editor.commands.setContent(initialDescription || '');
+    }
+    
+    // Manejar navegación del botón atrás en dispositivos móviles
+    // Añadir un estado al historial para capturar el evento popstate
+    if (typeof window !== 'undefined' && !historyStateAdded) {
+      window.history.pushState({ popup: true }, "");
+      setHistoryStateAdded(true);
     }
     
     // También resetear el estado de edición del título
@@ -156,16 +179,27 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     // Limpiar el temporizador cuando se desmonte
     return () => clearTimeout(focusTimer);
     
-  }, [isOpen, imageUrl, initialTitle, initialDescription, editor]); // dependencias necesarias
+  }, [isOpen, imageUrl, initialTitle, initialDescription, editor, historyStateAdded]); // dependencias necesarias
 
   // Memoizamos handleClose para evitar recreaciones innecesarias
   const handleClose = useCallback(() => {
-    // Save data before closing if there are changes
+    // Forzar guardado al cerrar si hay cambios, independientemente de si está escribiendo
     if (title !== initialTitle || description !== initialDescription) {
+      // Limpiar cualquier temporizador pendiente
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       onSave(title, description);
     }
+
+    // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
+    if (historyStateAdded && typeof window !== 'undefined') {
+      // Desactivamos temporalmente nuestro propio listener para evitar bucles
+      setHistoryStateAdded(false);
+      window.history.back();
+    }
+    
     onClose();
-  }, [title, description, initialTitle, initialDescription, onSave, onClose]);
+  }, [title, description, initialTitle, initialDescription, onSave, onClose, historyStateAdded]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -196,11 +230,36 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   // Referencias para evitar bucles infinitos
   const prevImageUrlRef = useRef<string>(imageUrl);
   
-  // Auto-save cuando el componente se desmonta o cuando cambia la imagen
+  // Manejar el evento popstate (botón atrás del navegador)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen && historyStateAdded) {
+        // Prevenir el comportamiento por defecto
+        handleClose();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', handlePopState);
+      }
+      
+      // Al desmontar, limpiar el estado del historial si fuimos nosotros quienes lo añadimos
+      if (historyStateAdded && isOpen) {
+        setHistoryStateAdded(false);
+      }
+    };
+  }, [isOpen, historyStateAdded, handleClose]);
+
   useEffect(() => {
     // Función para guardar los cambios pendientes
     const saveChanges = () => {
-      if (title !== initialTitle || description !== initialDescription) {
+      // No guardar si el usuario está escribiendo activamente
+      if (!isTyping && (title !== initialTitle || description !== initialDescription)) {
         onSave(title, description);
       }
     };

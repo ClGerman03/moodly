@@ -24,6 +24,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
   const [quality, setQuality] = useState<"draft" | "normal" | "high">("normal");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
+  const [historyStateAdded, setHistoryStateAdded] = useState(false);
   
   // Referencias para detectar clics fuera del popup
   const popupRef = useRef<HTMLDivElement>(null);
@@ -45,13 +46,43 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
     if (isOpen) {
       window.addEventListener("keydown", handleEscKey);
       window.addEventListener("mousedown", handleClickOutside);
+      
+      // Manejar navegación del botón atrás en dispositivos móviles
+      if (typeof window !== 'undefined' && !historyStateAdded) {
+        window.history.pushState({ popup: true }, "");
+        setHistoryStateAdded(true);
+      }
     }
     
     return () => {
       window.removeEventListener("keydown", handleEscKey);
       window.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, historyStateAdded]);
+  
+  // Manejar el evento popstate (botón atrás del navegador)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen && historyStateAdded) {
+        onClose();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', handlePopState);
+      }
+      
+      // Al desmontar, limpiar el estado del historial si fuimos nosotros quienes lo añadimos
+      if (historyStateAdded && isOpen) {
+        setHistoryStateAdded(false);
+      }
+    };
+  }, [isOpen, historyStateAdded, onClose]);
   
   // Manejar la generación del PDF
   const handleGeneratePdf = () => {
@@ -96,7 +127,14 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                 <LucideFileText size={18} className="mr-2" strokeWidth={1.5} /> Exportar a PDF
               </h2>
               <button 
-                onClick={onClose}
+                onClick={() => {
+                  // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
+                  if (historyStateAdded && typeof window !== 'undefined') {
+                    setHistoryStateAdded(false);
+                    window.history.back();
+                  }
+                  onClose();
+                }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <LucideX size={18} strokeWidth={1.5} />

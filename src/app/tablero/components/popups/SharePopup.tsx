@@ -26,6 +26,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
   const [userEmail, setUserEmail] = useState("");
   const [sharedUsers, setSharedUsers] = useState<string[]>([]);
   const [isPublished, setIsPublished] = useState(false);
+  const [historyStateAdded, setHistoryStateAdded] = useState(false);
   
   // Referencias para detectar clics fuera del popup
   const popupRef = useRef<HTMLDivElement>(null);
@@ -47,13 +48,43 @@ const SharePopup: React.FC<SharePopupProps> = ({
     if (isOpen) {
       window.addEventListener("keydown", handleEscKey);
       window.addEventListener("mousedown", handleClickOutside);
+      
+      // Manejar navegación del botón atrás en dispositivos móviles
+      if (typeof window !== 'undefined' && !historyStateAdded) {
+        window.history.pushState({ popup: true }, "");
+        setHistoryStateAdded(true);
+      }
     }
     
     return () => {
       window.removeEventListener("keydown", handleEscKey);
       window.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, historyStateAdded]);
+  
+  // Manejar el evento popstate (botón atrás del navegador)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen && historyStateAdded) {
+        onClose();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', handlePopState);
+      }
+      
+      // Al desmontar, limpiar el estado del historial si fuimos nosotros quienes lo añadimos
+      if (historyStateAdded && isOpen) {
+        setHistoryStateAdded(false);
+      }
+    };
+  }, [isOpen, historyStateAdded, onClose]);
   
   // Validar formato de email
   const isValidEmail = (email: string) => {
@@ -109,7 +140,14 @@ const SharePopup: React.FC<SharePopupProps> = ({
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 p-4">
               <h2 className="text-xl font-light text-gray-800 dark:text-gray-200">Compartir tablero</h2>
               <button 
-                onClick={onClose}
+                onClick={() => {
+                  // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
+                  if (historyStateAdded && typeof window !== 'undefined') {
+                    setHistoryStateAdded(false);
+                    window.history.back();
+                  }
+                  onClose();
+                }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <LucideX size={18} strokeWidth={1.5} />
