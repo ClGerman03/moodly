@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { LucideFileText, LucideEye } from "lucide-react";
-import SharePopup from "./popups/SharePopup";
 import PdfExportPopup from "./popups/PdfExportPopup";
 import ProfilePopover from "./popups/ProfilePopover";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +59,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ onClick }) => {
 interface ConfigPanelProps {
   isLiveMode?: boolean;
   onToggleLiveMode?: () => void;
+  onShare?: () => void;
 }
 
 /**
@@ -67,23 +67,14 @@ interface ConfigPanelProps {
  */
 const ConfigPanel: React.FC<ConfigPanelProps> = ({ 
   isLiveMode = false, 
-  onToggleLiveMode = () => {}
+  onToggleLiveMode = () => {},
+  onShare = () => {}
 }) => {
   // Obtener el estado de autenticación
   const { user } = useAuth();
   
-  // Estado para controlar la visibilidad de los popups
-  const [isSharePopupOpen, setIsSharePopupOpen] = useState(false);
+  // Estado para controlar la visibilidad del popup de PDF
   const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
-  
-  // Manejadores para el popup de compartir
-  const handleOpenSharePopup = () => {
-    setIsSharePopupOpen(true);
-  };
-  
-  const handleCloseSharePopup = () => {
-    setIsSharePopupOpen(false);
-  };
   
   // Manejadores para el popup de exportar a PDF
   const handleOpenPdfPopup = () => {
@@ -117,7 +108,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           />
           
           {/* Botón de compartir con texto */}
-          <ShareButton onClick={handleOpenSharePopup} />
+          <ShareButton onClick={onShare} />
         </>
       )}
       
@@ -128,12 +119,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         </div>
       )}
       
-      {/* Popup de compartir */}
-      <SharePopup 
-        isOpen={isSharePopupOpen} 
-        onClose={handleCloseSharePopup}
-        boardId="mi-tablero"
-      />
+      {/* El Popup de compartir ahora se maneja desde el componente padre */}
       
       {/* Popup de exportar a PDF */}
       <PdfExportPopup

@@ -7,7 +7,9 @@ import { LucideCheck, LucideX, LucideUsers, LucideSend } from "lucide-react";
 interface SharePopupProps {
   isOpen: boolean;
   onClose: () => void;
+  boardName: string;
   boardId?: string;
+  onPublish: (slug: string) => void;
 }
 
 /**
@@ -16,17 +18,29 @@ interface SharePopupProps {
 const SharePopup: React.FC<SharePopupProps> = ({
   isOpen,
   onClose,
-  boardId = "mi-tablero"
+  boardName,
+  boardId = "mi-tablero",
+  onPublish
 }) => {
   // Estado para la URL personalizada
-  const [customUrlSegment, setCustomUrlSegment] = useState(boardId);
+  const [customUrlSegment, setCustomUrlSegment] = useState(() => {
+    // Generar un slug basado en el nombre del tablero
+    return boardName
+      ? boardName.toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+      : boardId
+  });
   const [showUrlSuccess, setShowUrlSuccess] = useState(false);
+  const [publishingError, setPublishingError] = useState<string | null>(null);
   
   // Estado para compartir con usuarios
   const [userEmail, setUserEmail] = useState("");
   const [sharedUsers, setSharedUsers] = useState<string[]>([]);
   const [isPublished, setIsPublished] = useState(false);
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
+  const [boardLink, setBoardLink] = useState<string>("");
   
   // Referencias para detectar clics fuera del popup
   const popupRef = useRef<HTMLDivElement>(null);
@@ -93,13 +107,40 @@ const SharePopup: React.FC<SharePopupProps> = ({
   
   // Publicar tablero con URL personalizada
   const handlePublish = () => {
-    setIsPublished(true);
-    setShowUrlSuccess(true);
-    
-    // Ocultar el mensaje de éxito después de 3 segundos
-    setTimeout(() => {
-      setShowUrlSuccess(false);
-    }, 3000);
+    try {
+      // Verificar que el slug sea válido
+      if (!customUrlSegment || customUrlSegment.trim() === "") {
+        setPublishingError("Por favor, introduce un nombre válido para la URL");
+        return;
+      }
+      
+      // Slug normalizado
+      const finalSlug = customUrlSegment
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-');
+      
+      // Llamar a la función de publicación proporcionada como prop
+      onPublish(finalSlug);
+      
+      // Generar el enlace para compartir
+      const baseUrl = window.location.origin;
+      const shareLink = `${baseUrl}/board/${finalSlug}`;
+      setBoardLink(shareLink);
+      
+      setIsPublished(true);
+      setShowUrlSuccess(true);
+      setPublishingError(null);
+      
+      // Ocultar el mensaje de éxito después de 3 segundos
+      setTimeout(() => {
+        setShowUrlSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Error al publicar el tablero:", error);
+      setPublishingError("Ocurrió un error al publicar el tablero. Intenta de nuevo.");
+    }
   };
   
   // Añadir usuario a la lista de compartidos
@@ -199,6 +240,51 @@ const SharePopup: React.FC<SharePopupProps> = ({
                 >
                   {isPublished ? "Publicado" : "Publicar"}
                 </button>
+                
+                {/* Mensaje de error */}
+                <AnimatePresence>
+                  {publishingError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-3 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded-md"
+                    >
+                      {publishingError}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Enlace compartible si está publicado */}
+                {isPublished && boardLink && (
+                  <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-md">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Comparte este enlace:
+                    </p>
+                    <div className="flex">
+                      <input
+                        type="text"
+                        readOnly
+                        value={boardLink}
+                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-l-md bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(boardLink);
+                          // Mostrar un mensaje temporal de copiado
+                          alert('Enlace copiado al portapapeles');
+                        }}
+                        className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-l-0 rounded-r-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        title="Copiar al portapapeles"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Separador */}

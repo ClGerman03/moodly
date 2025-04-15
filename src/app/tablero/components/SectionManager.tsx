@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BentoImageGrid from './sections/BentoImageGrid';
 import { ImageLayout } from './sections/types/bento';
@@ -9,33 +9,33 @@ import LinkSection from './sections/LinkSection';
 import TypographySection from './sections/TypographySection';
 import TextSection from './sections/TextSection';
 import AddSection from './AddSection';
-import { SectionType, ColorPalette, LinkItem, ImageMetadata, FontOption, TextContent } from '../types';
+import { SectionType, ImageMetadata, Section } from '../types';
+import { prepareForStorage, prepareForDisplay } from '@/utils/serialization/sectionAdapters';
 
 // Usando los tipos importados desde ../types
 
-interface Section {
-  id: string;
-  type: SectionType;
-  title: string;
-  data?: {
-    colors?: string[];
-    palettes?: ColorPalette[];
-    images?: string[];
-    imageLayouts?: { [key: number]: ImageLayout };
-    imageMetadata?: { [key: string]: ImageMetadata };
-    links?: LinkItem[];
-    fonts?: FontOption[];
-    textContent?: TextContent;
-  };
-}
+// La interfaz Section ahora se importa desde '../types'
 
 interface SectionManagerProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   isLiveMode?: boolean;
+  initialSections?: Section[];
 }
 
-const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProps) => {
+const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManagerProps>((
+  { fileInputRef, isLiveMode = false, initialSections = [] }: SectionManagerProps,
+  ref
+) => {
   const [sections, setSections] = useState<Section[]>([]);
+  
+  // Procesar las secciones iniciales cuando se cargan
+  useEffect(() => {
+    if (initialSections && initialSections.length > 0) {
+      console.log('SectionManager: Cargando secciones iniciales', initialSections);
+      const processedSections = prepareForDisplay(initialSections);
+      setSections(processedSections);
+    }
+  }, [initialSections]);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
   
@@ -128,7 +128,14 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
       
       if (oldIndex !== -1 && currentLayouts[oldIndex]) {
         // Transferir el layout de la posición anterior a la nueva posición
-        newImageLayouts[newIndex] = currentLayouts[oldIndex];
+        const layout = currentLayouts[oldIndex];
+        // Verificar que sea un valor válido de ImageLayout
+        if (layout === "square" || layout === "vertical" || layout === "horizontal") {
+          newImageLayouts[newIndex] = layout;
+        } else {
+          // Valor por defecto si no es válido
+          newImageLayouts[newIndex] = "square";
+        }
       }
     });
     
@@ -161,8 +168,13 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
     const updatedLayouts: { [key: number]: ImageLayout } = {};
     
     // Reasignar layouts, desplazando todos los índices posteriores al eliminado
-    Object.entries(currentLayouts).forEach(([i, layout]) => {
+    Object.entries(currentLayouts).forEach(([i, layoutValue]) => {
       const imageIndex = parseInt(i);
+      // Verificar que sea un valor válido de ImageLayout
+      const layout = (layoutValue === "square" || layoutValue === "vertical" || layoutValue === "horizontal") 
+        ? layoutValue as ImageLayout 
+        : "square" as ImageLayout;
+        
       if (imageIndex < index) {
         updatedLayouts[imageIndex] = layout;
       } else if (imageIndex > index) {
@@ -277,7 +289,13 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
             {renderSectionTitle(section)}
             <BentoImageGrid 
               images={section.data?.images || []} 
-              imageLayouts={new Map(Object.entries(section.data?.imageLayouts || {}).map(([key, value]) => [parseInt(key), value]))}
+              imageLayouts={new Map(Object.entries(section.data?.imageLayouts || {}).map(([key, value]) => {
+                // Verificar que el valor sea un layout válido
+                const layout = (value === "square" || value === "vertical" || value === "horizontal") 
+                  ? value as ImageLayout 
+                  : "square" as ImageLayout;
+                return [parseInt(key), layout];
+              }))}
               imageMetadata={new Map(Object.entries(section.data?.imageMetadata || {}).map(([key, value]) => [key, value]))}
               onLayoutChange={(index, layout) => handleLayoutChange(section.id, index, layout)} 
               onImagesAdd={(newImages) => handleImagesUpdate(section.id, newImages)}
@@ -374,6 +392,15 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
     }
   };
   
+  // Exponer la función getSections a través del ref
+  useImperativeHandle(ref, () => ({
+    getSections: () => {
+      console.log('SectionManager: Obteniendo secciones para almacenamiento', sections);
+      // Preparar secciones para almacenamiento antes de devolverlas
+      return prepareForStorage(sections);
+    }
+  }));
+  
   return (
     <div className="w-full">
       <AnimatePresence>
@@ -386,6 +413,9 @@ const SectionManager = ({ fileInputRef, isLiveMode = false }: SectionManagerProp
       )}
     </div>
   );
-};
+});
+
+// Agregar displayName para evitar advertencia de eslint
+SectionManager.displayName = 'SectionManager';
 
 export default SectionManager;

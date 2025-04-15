@@ -36,3 +36,20 @@ export interface FontOption {
   category: "serif" | "sans-serif" | "display" | "monospace";
   weights: number[];
 }
+
+// Interfaz para secciones del tablero
+export interface Section {
+  id: string;
+  type: SectionType;
+  title: string;
+  data?: {
+    colors?: string[];
+    palettes?: ColorPalette[];
+    images?: string[];
+    imageLayouts?: { [key: number]: string | 'square' | 'vertical' | 'horizontal' }; // Tipos específicos para layouts
+    imageMetadata?: { [key: string]: ImageMetadata };
+    links?: LinkItem[];
+    fonts?: FontOption[];
+    textContent?: TextContent;
+  };
+}

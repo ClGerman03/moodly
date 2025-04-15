@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import ConfigPanel from './components/ConfigPanel';
 import SectionManager from './components/SectionManager';
+import SharePopup from './components/popups/SharePopup';
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { Section } from './types';
 
 export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
@@ -13,7 +15,12 @@ export default function Tablero() {
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
   const [showNameForm, setShowNameForm] = useState<boolean>(true);
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
+  const [isSharePopupOpen, setIsSharePopupOpen] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isPublished, setIsPublished] = useState<boolean>(false);
+  const [publishedSlug, setPublishedSlug] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sectionManagerRef = useRef<{ getSections: () => Section[] }>(null);
   
   // Obtener el estado de autenticación
   const { user, isLoading } = useAuth();
@@ -30,6 +37,49 @@ export default function Tablero() {
       }
     }
   }, [isLoading, user, isNameSet, boardName]); // Incluimos todas las dependencias utilizadas
+  
+  // Función para manejar la publicación del tablero
+  const handlePublishBoard = (slug: string) => {
+    try {
+      // Verificar que el SectionManager tenga una referencia válida
+      if (!sectionManagerRef.current) {
+        console.error("No se puede acceder a las secciones del tablero");
+        return;
+      }
+      
+      // Obtener las secciones actuales del tablero (ya procesadas por prepareForStorage)
+      const sections = sectionManagerRef.current.getSections();
+      console.log('Publicando tablero - Secciones procesadas:', sections);
+      
+      // Crear un objeto con los datos del tablero
+      const boardData = {
+        name: boardName,
+        sections,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isPublished: true,
+        userId: user?.id || "anonymous",
+      };
+      
+      // Serializar a JSON y guardar en localStorage
+      const serializedData = JSON.stringify(boardData);
+      console.log('Tamaño de datos serializados:', serializedData.length, 'bytes');
+      console.log('Clave de localStorage:', `moodly-board-${slug}`);
+      localStorage.setItem(`moodly-board-${slug}`, serializedData);
+      
+      // Actualizar el estado
+      setIsPublished(true);
+      setPublishedSlug(slug);
+      
+      // URL completa para compartir
+      const shareUrl = `${window.location.origin}/board/${slug}`;
+      console.log('URL para compartir:', shareUrl);
+      
+      console.log(`Tablero publicado con slug: ${slug}`);
+    } catch (error) {
+      console.error("Error al publicar el tablero:", error);
+    }
+  };
 
   // Manejar la configuración del nombre del tablero
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -130,6 +180,7 @@ export default function Tablero() {
               <ConfigPanel 
                 isLiveMode={isLiveMode}
                 onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
+                onShare={() => setIsSharePopupOpen(true)}
               />
             </div>
             
@@ -137,10 +188,20 @@ export default function Tablero() {
             <SectionManager 
               fileInputRef={fileInputRef}
               isLiveMode={isLiveMode}
+              ref={sectionManagerRef}
             />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Popup para compartir el tablero */}
+      <SharePopup
+        isOpen={isSharePopupOpen}
+        onClose={() => setIsSharePopupOpen(false)}
+        boardName={boardName}
+        boardId={publishedSlug || boardName.toLowerCase().replace(/\s+/g, '-')}
+        onPublish={handlePublishBoard}
+      />
     </div>
   );
 }
