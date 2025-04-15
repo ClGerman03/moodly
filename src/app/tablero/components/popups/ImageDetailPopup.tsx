@@ -238,26 +238,27 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop sin blur */}
+          {/* Backdrop con efecto mejorado */}
           <motion.div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
           />
 
-          {/* Main popup container - Optimizado para móviles */}
+          {/* Main popup container - Optimizado para móviles con animaciones mejoradas */}
           <motion.div
             ref={popupRef}
-            className="relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-xl flex flex-col md:flex-row max-w-5xl w-[95%] sm:w-[90%] max-h-[95vh] md:max-h-[90vh] overflow-hidden"
+            className="relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col md:flex-row max-w-5xl w-[95%] sm:w-[90%] max-h-[95vh] md:max-h-[90vh] overflow-hidden border border-gray-100 dark:border-gray-800"
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ 
               type: "spring", 
               damping: 25, 
-              stiffness: 300 
+              stiffness: 300,
+              mass: 0.8
             }}
           >
             {/* Content section (left side) - Ajustado para móviles */}
@@ -296,7 +297,8 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                   <motion.h2 
                     className={`text-xl sm:text-2xl font-light text-gray-700 dark:text-gray-300 ${!isLiveMode ? 'cursor-pointer' : ''} group mb-4 sm:mb-6`}
                     onClick={() => !isLiveMode && setEditingTitle(true)}
-                    whileHover={!isLiveMode ? { x: 2 } : undefined}
+                    whileHover={!isLiveMode ? { x: 2, color: '#3B82F6' } : undefined}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   >
                     {title || (isLiveMode ? "" : "Haz clic para añadir un título")}
                     {!isLiveMode && <span className="inline-block w-0 group-hover:w-full h-[1px] bg-gray-400/30 dark:bg-gray-500/30 mt-1 transition-all duration-300"></span>}
@@ -312,9 +314,14 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                   />
                   {/* Verificamos si es string vacío o HTML con tags vacíos como <p></p> */}
                   {(!description || description === '<p></p>' || description === '<p>&nbsp;</p>') && !isLiveMode && (
-                    <div className="text-gray-400 dark:text-gray-500 italic text-sm mt-2 pointer-events-none absolute top-[9.5rem] left-5 sm:left-7 md:left-9">
+                    <motion.div 
+                      className="text-gray-400 dark:text-gray-500 italic text-sm mt-2 pointer-events-none absolute top-[9.5rem] left-5 sm:left-7 md:left-9"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3, duration: 0.3 }}
+                    >
                       Escribe aquí para añadir una descripción...
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               </div>
@@ -323,17 +330,24 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
             {/* Image section (right side) - Optimizado para móviles */}
             <div className="md:w-1/2 p-3 sm:p-4 relative flex items-center justify-center overflow-auto">
               <div className="relative flex items-center justify-center max-h-full w-[90%] sm:w-[95%] md:w-full">
-                <Image
-                  src={imageUrl}
-                  alt={title || "Imagen seleccionada"}
-                  width={0}
-                  height={0}
-                  sizes="(max-width: 768px) 75vw, 50vw"
-                  className="rounded-xl md:rounded-2xl shadow-sm max-w-full max-h-[50vh] sm:max-h-[55vh] md:max-h-[70vh] h-auto w-auto object-contain"
-                  style={{ objectFit: 'contain' }}
-                  priority
-                  unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
-                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
+                  className="relative"
+                >
+                  <Image
+                    src={imageUrl}
+                    alt={title || "Imagen seleccionada"}
+                    width={0}
+                    height={0}
+                    sizes="(max-width: 768px) 75vw, 50vw"
+                    className="rounded-xl md:rounded-2xl shadow-md max-w-full max-h-[50vh] sm:max-h-[55vh] md:max-h-[70vh] h-auto w-auto object-contain"
+                    style={{ objectFit: 'contain' }}
+                    priority
+                    unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
+                  />
+                </motion.div>
               </div>
             </div>
           </motion.div>

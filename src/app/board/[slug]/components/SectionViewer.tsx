@@ -6,6 +6,7 @@ import { Section } from "@/app/tablero/types";
 
 // Importar componentes específicos de feedback
 import BentoImageFeedback from "./feedback/BentoImageFeedback";
+import ColorPaletteFeedback from "./feedback/ColorPaletteFeedback";
 
 interface SectionViewerProps {
   section: Section;
@@ -40,6 +41,11 @@ const SectionViewer: React.FC<SectionViewerProps> = ({
         {/* Usar componente específico según el tipo de sección */}
         {section.type === "bento" ? (
           <BentoImageFeedback 
+            section={section}
+            onFeedback={onFeedback}
+          />
+        ) : section.type === "palette" ? (
+          <ColorPaletteFeedback
             section={section}
             onFeedback={onFeedback}
           />

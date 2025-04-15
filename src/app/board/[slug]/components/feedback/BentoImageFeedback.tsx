@@ -7,6 +7,7 @@ import GridLayout from "react-grid-layout";
 import { ImageLayout } from "@/app/tablero/components/sections/types/bento";
 import { Section } from "@/app/tablero/types";
 import { ThumbsUp, ThumbsDown, HelpCircle, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import ImageFeedbackPopup from "./ImageFeedbackPopup";
 
 // Importar estilos de React-Grid-Layout
 import "react-grid-layout/css/styles.css";
@@ -45,6 +46,10 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   const [tappedImage, setTappedImage] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [userFeedback, setUserFeedback] = useState<Record<string, 'positive' | 'negative' | 'neutral' | null>>({});
+  
+  // Estados para el popup de comentarios
+  const [isCommentPopupOpen, setIsCommentPopupOpen] = useState(false);
+  const [selectedImageForComment, setSelectedImageForComment] = useState("");
   
   // Estados para carrusel móvil
   const [currentMobileImageIndex, setCurrentMobileImageIndex] = useState(0);
@@ -260,32 +265,61 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   
   // Manejar interacción de feedback de imagen
   const handleImageFeedback = (imageUrl: string, type: 'positive' | 'negative' | 'neutral' | 'comment') => {
-    // Actualizar estado local si es positivo o negativo
-    if (type !== 'comment') {
-      setUserFeedback(prev => ({
-        ...prev,
-        [imageUrl]: type
-      }));
+    // Para comentarios, abrir el popup
+    if (type === 'comment') {
+      setSelectedImageForComment(imageUrl);
+      setIsCommentPopupOpen(true);
       
-      // Opcionalmente, enviar feedback al componente padre
-      onFeedback?.(section.id, {
-        imageFeedback: {
-          ...userFeedback,
-          [imageUrl]: type
-        }
-      });
-    } else {
-      // Para comentarios, podríamos implementar diferentes acciones en el futuro
-      // Como abrir un panel de comentarios o un popup
-      onFeedback?.(section.id, {
-        commentRequested: imageUrl
-      });
+      // Cerrar panel de feedback en móvil si está abierto
+      if (isMobile) {
+        setTappedImage(null);
+      }
+      return;
     }
+    
+    // Actualizar estado local para otros tipos de feedback
+    setUserFeedback(prev => ({
+      ...prev,
+      [imageUrl]: type
+    }));
+    
+    // Opcionalmente, enviar feedback al componente padre
+    onFeedback?.(section.id, {
+      imageFeedback: {
+        ...userFeedback,
+        [imageUrl]: type
+      }
+    });
     
     // Cerrar panel de feedback en móvil
     if (isMobile) {
       setTappedImage(null);
     }
+  };
+  
+  // Manejar el envío de comentarios desde el popup
+  const handleSubmitComment = (comment: string) => {
+    // Guardar el feedback como tipo 'comment'
+    setUserFeedback(prev => ({
+      ...prev,
+      [selectedImageForComment]: 'neutral' // Usamos neutral para indicar un comentario
+    }));
+    
+    // Enviar el comentario al componente padre
+    onFeedback?.(section.id, {
+      imageFeedback: {
+        ...userFeedback,
+        [selectedImageForComment]: 'neutral'
+      },
+      commentContent: {
+        imageUrl: selectedImageForComment,
+        comment,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    // Cerrar el popup
+    setIsCommentPopupOpen(false);
   };
   
   // Manejar clic/tap en imagen
@@ -314,6 +348,14 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   
   return (
     <div className="relative" ref={gridRef}>
+      {/* Popup para comentarios */}
+      <ImageFeedbackPopup
+        isOpen={isCommentPopupOpen}
+        onClose={() => setIsCommentPopupOpen(false)}
+        imageUrl={selectedImageForComment}
+        imageTitle={section.title}
+        onSubmitComment={handleSubmitComment}
+      />
       {/* Vista móvil: carrusel de una imagen a la vez */}
       {isMobile && containerWidth > 0 ? (
         <div className="relative h-[75vh] w-full overflow-hidden">
@@ -336,7 +378,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                   src={images[currentMobileImageIndex]}
                   alt={`Image ${currentMobileImageIndex + 1}`}
                   fill
-                  className="object-contain"
+                  className="object-contain rounded-xl"
                   sizes="100vw"
                   priority
                 />
@@ -349,7 +391,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                     ) : userFeedback[images[currentMobileImageIndex]] === 'negative' ? (
                       <ThumbsDown size={11} strokeWidth={2} />
                     ) : (
-                      <HelpCircle size={11} strokeWidth={2} />
+                      <HelpCircle size={11} strokeWidth={1.5} />
                     )}
                   </div>
                 )}
@@ -378,9 +420,9 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                 </div>
                 
                 {/* Panel de feedback y opciones */}
-                <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center mb-10">
+                <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center mb-4 px-3">
                   <div 
-                    className="flex gap-2 items-center"
+                    className="flex gap-2 items-center bg-black/30 backdrop-blur-sm py-3 px-4 rounded-full"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Opción positiva - Pulgar arriba */}
@@ -415,18 +457,18 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                       aria-label="Neutral feedback"
                     >
                       <motion.div whileHover={{ color: "rgba(186, 230, 253, 0.9)" }}>
-                        <HelpCircle size={16} strokeWidth={1.5} />
+                        <HelpCircle size={16} strokeWidth={1} />
                       </motion.div>
                     </motion.button>
                     
                     {/* Opción de comentario */}
                     <motion.button
-                      className="bg-black/70 text-white p-2 rounded-full hover:bg-black/80 transition-colors"
+                      className="bg-amber-400 text-black p-2 rounded-full hover:bg-amber-500 transition-colors"
                       whileTap={{ scale: 0.9 }}
                       onClick={() => handleImageFeedback(images[currentMobileImageIndex], 'comment')}
                       aria-label="Add comment"
                     >
-                      <motion.div whileHover={{ color: "rgba(209, 213, 219, 0.95)" }}>
+                      <motion.div whileHover={{ color: "rgba(0, 0, 0, 0.7)" }}>
                         <MessageSquare size={16} strokeWidth={1.5} />
                       </motion.div>
                     </motion.button>
@@ -490,7 +532,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                       ) : userFeedback[imageUrl] === 'negative' ? (
                         <ThumbsDown size={11} strokeWidth={2} />
                       ) : (
-                        <HelpCircle size={11} strokeWidth={2} />
+                        <HelpCircle size={11} strokeWidth={1.5} />
                       )}
                     </div>
                   )}
@@ -568,7 +610,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                               <motion.div
                                 whileHover={{ color: "rgba(186, 230, 253, 0.9)" }} // Hover azul sutil
                               >
-                                <HelpCircle size={16} strokeWidth={1.5} />
+                                <HelpCircle size={16} strokeWidth={1} />
                               </motion.div>
                             </motion.button>
                           </AnimatePresence>
@@ -576,7 +618,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                         
                         {/* Botón de comentario en esquina inferior derecha */}
                         <motion.button
-                          className="absolute bottom-3 right-3 bg-black/70 text-white p-2 rounded-full hover:bg-black/80 transition-colors"
+                          className="absolute bottom-3 right-3 bg-amber-400 text-black p-2 rounded-full hover:bg-amber-500 transition-colors"
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.8 }}
@@ -589,7 +631,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                           aria-label="Add comment"
                         >
                           <motion.div
-                            whileHover={{ color: "rgba(209, 213, 219, 0.95)" }} // Hover gris sutil
+                            whileHover={{ color: "rgba(0, 0, 0, 0.7)" }} // Hover negro sutil
                           >
                             <MessageSquare size={16} strokeWidth={1.5} />
                           </motion.div>

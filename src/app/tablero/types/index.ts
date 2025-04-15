@@ -1,6 +1,6 @@
 // Tipos compartidos para los componentes del tablero
 
-export type SectionType = "bento" | "palette" | "links" | "typography" | "text";
+export type SectionType = "bento" | "palette" | "links" | "typography" | "text" | "imageGallery";
 
 export type TextSize = "small" | "medium" | "large";
 

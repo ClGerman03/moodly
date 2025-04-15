@@ -2,7 +2,8 @@
 
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import BentoImageGrid from './sections/BentoImageGrid';
+import SimpleBentoImageGrid from './sections/SimpleBentoImageGrid';
+import ImageGallerySection from './sections/ImageGallerySection';
 import { ImageLayout } from './sections/types/bento';
 import ColorPaletteComponent from './sections/ColorPalette';
 import LinkSection from './sections/LinkSection';
@@ -45,6 +46,7 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
   const handleAddSection = (type: SectionType) => {
     // Asignar titulo predeterminado segun el tipo
     const defaultTitle = type === "bento" ? "Bento Images" : 
+                     type === "imageGallery" ? "Galería de Imágenes" :
                      type === "palette" ? "Color Palette" : 
                      type === "typography" ? "Tipografía" : 
                      type === "text" ? "Texto" : "Enlaces";
@@ -274,6 +276,31 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
   // Renderizar una sección basada en su tipo
   const renderSection = (section: Section) => {
     switch (section.type) {
+      case "imageGallery":
+        return (
+          <motion.div 
+            key={section.id} 
+            className="mt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            onMouseEnter={() => setHoveredSectionId(section.id)}
+            onMouseLeave={() => setHoveredSectionId(null)}
+          >
+            {renderSectionTitle(section)}
+            <ImageGallerySection 
+              images={section.data?.images || []} 
+              imageMetadata={new Map(Object.entries(section.data?.imageMetadata || {}).map(([key, value]) => [key, value]))}
+              onImagesAdd={(newImages: string[]) => handleImagesUpdate(section.id, newImages)}
+              onImageRemove={(index: number) => handleImageRemove(section.id, index)}
+              onImageMetadataChange={(imageUrl: string, metadata: ImageMetadata) => handleImageMetadataChange(section.id, imageUrl, metadata)}
+              onReorder={(reorderedImages: string[]) => handleImagesReorder(section.id, reorderedImages)}
+              fileInputRef={fileInputRef}
+              isLiveMode={isLiveMode}
+            />
+          </motion.div>
+        );
       case "bento":
         return (
           <motion.div 
@@ -287,21 +314,13 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
             onMouseLeave={() => setHoveredSectionId(null)}
           >
             {renderSectionTitle(section)}
-            <BentoImageGrid 
+            <SimpleBentoImageGrid 
               images={section.data?.images || []} 
-              imageLayouts={new Map(Object.entries(section.data?.imageLayouts || {}).map(([key, value]) => {
-                // Verificar que el valor sea un layout válido
-                const layout = (value === "square" || value === "vertical" || value === "horizontal") 
-                  ? value as ImageLayout 
-                  : "square" as ImageLayout;
-                return [parseInt(key), layout];
-              }))}
               imageMetadata={new Map(Object.entries(section.data?.imageMetadata || {}).map(([key, value]) => [key, value]))}
-              onLayoutChange={(index, layout) => handleLayoutChange(section.id, index, layout)} 
-              onImagesAdd={(newImages) => handleImagesUpdate(section.id, newImages)}
-              onImageRemove={(index) => handleImageRemove(section.id, index)}
-              onImageMetadataChange={(imageUrl, metadata) => handleImageMetadataChange(section.id, imageUrl, metadata)}
-              onReorder={(reorderedImages) => handleImagesReorder(section.id, reorderedImages)}
+              onImagesAdd={(newImages: string[]) => handleImagesUpdate(section.id, newImages)}
+              onImageRemove={(index: number) => handleImageRemove(section.id, index)}
+              onImageMetadataChange={(imageUrl: string, metadata: ImageMetadata) => handleImageMetadataChange(section.id, imageUrl, metadata)}
+              onReorder={(reorderedImages: string[]) => handleImagesReorder(section.id, reorderedImages)}
               fileInputRef={fileInputRef}
               isLiveMode={isLiveMode}
             />

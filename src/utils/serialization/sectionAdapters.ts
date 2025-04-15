@@ -51,6 +51,43 @@ function processBlobUrls(url: string): string {
  * Adaptadores específicos para cada tipo de sección
  */
 const sectionAdapters: Record<SectionType, SectionAdapter> = {
+  imageGallery: {
+    prepareForStorage: (section: Section): Section => {
+      console.log("Preparando sección imageGallery para almacenamiento", section);
+      
+      // Procesar imágenes si existen
+      const processedImages = section.data?.images?.map(processBlobUrls);
+      
+      // Verificar si imageMetadata es un Map y convertirlo a objeto
+      const imageMetadata = section.data?.imageMetadata 
+        ? (section.data.imageMetadata instanceof Map
+            ? Object.fromEntries(section.data.imageMetadata)
+            : section.data.imageMetadata)
+        : undefined;
+      
+      // Asegúrate de que la estructura de datos esté completa para la reconstrucción
+      return {
+        ...section,
+        data: {
+          ...section.data,
+          images: processedImages,
+          imageMetadata,
+        }
+      };
+    },
+    prepareForDisplay: (section: Section): Section => {
+      console.log("Preparando sección imageGallery para visualización", section);
+      
+      return {
+        ...section,
+        data: {
+          ...section.data,
+          // No convertimos a Map para evitar problemas de tipos
+          // Los componentes verifican el tipo y actúan en consecuencia
+        }
+      };
+    }
+  },
   bento: {
     prepareForStorage: (section: Section): Section => {
       console.log("Preparando sección bento para almacenamiento", section);
