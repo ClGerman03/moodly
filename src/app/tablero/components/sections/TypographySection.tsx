@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Definición de las tipografías disponibles
+// Definition of available typography
 interface FontOption {
   id: string;
   name: string;
@@ -18,7 +18,7 @@ interface TypographySectionProps {
   isLiveMode?: boolean;
 }
 
-// Lista de fuentes populares
+// List of popular fonts
 const availableFonts: FontOption[] = [
   {
     id: "inter",
@@ -90,9 +90,9 @@ const TypographySection: React.FC<TypographySectionProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isExampleMenuOpen, setIsExampleMenuOpen] = useState(false);
 
-  // Cargar fuentes de Google Fonts
+  // Load fonts from Google Fonts
   useState(() => {
-    // Solo cargamos las fuentes si estamos en el navegador
+    // Only load fonts if we're in the browser
     if (typeof window !== 'undefined') {
       const linkElement = document.createElement('link');
       linkElement.rel = 'stylesheet';
@@ -101,13 +101,13 @@ const TypographySection: React.FC<TypographySectionProps> = ({
     }
   });
 
-  // Filtrar fuentes basado en la búsqueda
+  // Filter fonts based on search
   const filteredFonts = searchQuery.trim() === "" 
     ? availableFonts 
     : availableFonts.filter(font => 
         font.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // Abrir el modal para agregar tipografía
+  // Open the modal to add typography
   const openAddFontDialog = () => {
     setSearchQuery("");
     setIsAddingFont(true);
@@ -119,20 +119,20 @@ const TypographySection: React.FC<TypographySectionProps> = ({
   };
 
   const addFont = (font: FontOption) => {
-    // Verificar si la fuente ya está seleccionada
+    // Check if the font is already selected
     if (selectedFonts.some(f => f.id === font.id)) return;
     
-    // Añadir fuente
+    // Add font
     const newSelectedFonts = [...selectedFonts, font];
     setSelectedFonts(newSelectedFonts);
     onChange(newSelectedFonts);
     
-    // Cerrar el modal
+    // Close the modal
     setIsAddingFont(false);
   };
   
   const removeFont = (fontId: string) => {
-    // Eliminar fuente
+    // Remove font
     const newSelectedFonts = selectedFonts.filter(f => f.id !== fontId);
     setSelectedFonts(newSelectedFonts);
     onChange(newSelectedFonts);
@@ -156,18 +156,18 @@ const TypographySection: React.FC<TypographySectionProps> = ({
     }
   };
 
-  // Mostrar siempre las fuentes seleccionadas en la vista principal
+  // Always show the selected fonts in the main view
 
   return (
     <div className="w-full bg-white dark:bg-gray-950 rounded-xl p-4">
-      {/* Controles principales */}
+      {/* Main controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
 
         {!isLiveMode && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="relative group">
               <label htmlFor="preview-text" className="text-xs text-gray-500 dark:text-gray-400 mb-1 inline-block">
-                Texto de ejemplo:
+                Sample text:
               </label>
               <div className="relative">
                 <button
@@ -176,10 +176,10 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                   onClick={() => setIsExampleMenuOpen(!isExampleMenuOpen)}
                 >
                   <span className="truncate">
-                    {previewText === "The quick brown fox jumps over the lazy dog." && "Texto en inglés"}
-                    {previewText === "El veloz zorro marrón salta sobre el perro perezoso." && "Texto en español"}
+                    {previewText === "The quick brown fox jumps over the lazy dog." && "English text"}
+                    {previewText === "El veloz zorro marrón salta sobre el perro perezoso." && "Spanish text"}
                     {previewText === "Lorem ipsum dolor sit amet, consectetur adipiscing elit." && "Lorem ipsum"}
-                    {previewText === "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789" && "Caracteres"}
+                    {previewText === "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789" && "Characters"}
                   </span>
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
@@ -214,7 +214,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                               setIsExampleMenuOpen(false);
                             }}
                           >
-                            Texto en inglés
+                            English text
                           </button>
                         </li>
                         <li>
@@ -225,7 +225,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                               setIsExampleMenuOpen(false);
                             }}
                           >
-                            Texto en español
+                            Spanish text
                           </button>
                         </li>
                         <li>
@@ -247,7 +247,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                               setIsExampleMenuOpen(false);
                             }}
                           >
-                            Caracteres
+                            Characters
                           </button>
                         </li>
                       </ul>
@@ -258,7 +258,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
             </div>
             <div className="relative group ml-3">
               <label htmlFor="preview-size" className="text-xs text-gray-500 dark:text-gray-400 mb-1 inline-block">
-                Tamaño:
+                Size:
               </label>
                <div className="flex space-x-1 border border-gray-200 dark:border-gray-800 rounded-lg p-0.5">
                 <button
@@ -291,7 +291,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
         )}
       </div>
 
-      {/* Botón para agregar tipografías - oculto en modo live */}
+      {/* Button to add typography - hidden in live mode */}
       {!isLiveMode && (
         <motion.button 
           onClick={openAddFontDialog}
@@ -302,11 +302,11 @@ const TypographySection: React.FC<TypographySectionProps> = ({
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          Agregar tipografía
+          Add typography
         </motion.button>
       )}
 
-      {/* Lista de fuentes seleccionadas */}
+      {/* List of selected fonts */}
       <div className="grid gap-6">
         <AnimatePresence>
           {selectedFonts.length === 0 ? (
@@ -318,7 +318,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
               className="flex justify-center items-center py-10"
             >
               <p className="text-gray-400 dark:text-gray-600 text-sm">
-                No hay tipografías seleccionadas. Haz clic en &quot;Agregar tipografía&quot; para comenzar.
+                No typography selected. Click &quot;Add typography&quot; to get started.
               </p>
             </motion.div>
           ) : (
@@ -332,12 +332,12 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                 transition={{ duration: 0.2 }}
                 className="pb-4 mb-4 relative group border-b border-gray-100 dark:border-gray-800/50 last:border-0 last:mb-0"
               >
-                {/* Remove button - oculto en modo live */}
+                {/* Remove button - hidden in live mode */}
                 {!isLiveMode && (
                   <button
                     onClick={() => removeFont(font.id)}
                     className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    aria-label="Eliminar tipografía"
+                    aria-label="Remove typography"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -401,7 +401,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
         </AnimatePresence>
       </div>
       
-      {/* Modal para agregar tipografías */}
+      {/* Modal to add typography */}
       <AnimatePresence>
         {isAddingFont && (
           <motion.div
@@ -424,7 +424,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                 <motion.h2 
                   className="text-xl font-light text-gray-700 dark:text-gray-300 group"
                 >
-                  Agregar tipografía
+                  Add typography
                 </motion.h2>
                 <button 
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -437,7 +437,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                 </button>
               </div>
               
-              {/* Buscador - Estilo minimalista */}
+              {/* Search - Minimalist style */}
               <div className="relative mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
                 <div className="flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 mr-2">
@@ -446,7 +446,7 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                   </svg>
                   <input
                     type="text"
-                    placeholder="Buscar tipografía..."
+                    placeholder="Search typography..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full py-1 bg-transparent border-none focus:outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500"
@@ -465,11 +465,11 @@ const TypographySection: React.FC<TypographySectionProps> = ({
                 </div>
               </div>
               
-              {/* Lista de fuentes filtradas */}
+              {/* List of filtered fonts */}
               <div className="grid gap-3 max-h-[50vh] overflow-y-auto pr-2">
                 {filteredFonts.length === 0 ? (
                   <p className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No se encontraron resultados para &quot;{searchQuery}&quot;
+                    No results found for &quot;{searchQuery}&quot;
                   </p>
                 ) : (
                   filteredFonts.map((font) => (

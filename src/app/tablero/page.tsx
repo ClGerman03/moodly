@@ -125,7 +125,7 @@ export default function Tablero() {
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
             <h1 className="mb-6 text-2xl font-light text-gray-800 tracking-wide">
-              ¿Cómo se llamará tu tablero?
+              What will you name your board?
             </h1>
             <form onSubmit={handleNameSubmit} className="w-full space-y-4">
               <div className="relative w-full">
@@ -133,7 +133,7 @@ export default function Tablero() {
                   type="text"
                   value={boardName}
                   onChange={(e) => setBoardName(e.target.value)}
-                  placeholder="Escribe un nombre"
+                  placeholder="Enter a name"
                   className="w-full py-2 text-xl text-center text-gray-700 placeholder-gray-300/70 bg-transparent outline-none focus:outline-none focus:ring-0 focus:shadow-none transition-all duration-300"
                   autoFocus
                   style={{ outline: 'none' }}
@@ -143,7 +143,7 @@ export default function Tablero() {
                 type="submit"
                 className="w-auto px-5 py-1.5 mt-4 text-sm font-medium text-white transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transform hover:scale-102 opacity-90 hover:opacity-100 flex items-center justify-center mx-auto"
               >
-                Comenzar
+                Start
               </button>
             </form>
           </motion.div>
@@ -159,7 +159,7 @@ export default function Tablero() {
             transition={{ duration: 2, ease: "easeInOut" }}
           >
             <h1 className="text-3xl font-light text-gray-800">
-              {user ? `Bienvenido, ${user.email?.split('@')[0]}` : "Bienvenido"}
+              {user ? `Welcome, ${user.email?.split('@')[0]}` : "Welcome"}
             </h1>
           </motion.div>
         )}

@@ -14,19 +14,19 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
   const [subtitle, setSubtitle] = useState(initialText?.subtitle || "");
   const [size, setSize] = useState<TextSize>(initialText?.size || "medium");
 
-  // Sincronizar con el estado padre cuando cambia el texto
-  // Usamos una referencia para evitar renderizados innecesarios
+  // Synchronize with parent state when text changes
+  // We use a reference to avoid unnecessary renders
   const prevTextRef = useRef<{title: string, subtitle: string, size: TextSize}>();
   
   useEffect(() => {
-    // Solo actualizar si hay cambios significativos
+    // Only update if there are significant changes
     const hasChanged = !prevTextRef.current || 
       prevTextRef.current.title !== title || 
       prevTextRef.current.subtitle !== subtitle || 
       prevTextRef.current.size !== size;
     
     if (onChange && hasChanged) {
-      // Guardamos el valor actual para comparar en futuras actualizaciones
+      // Save the current value to compare in future updates
       prevTextRef.current = {title, subtitle, size};
       
       const textContent: TextContent = {
@@ -38,7 +38,7 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
     }
   }, [title, subtitle, size, onChange]);
 
-  // Determinar las clases de tamaño de texto según el tamaño seleccionado
+  // Determine text size classes based on the selected size
   const getTitleClass = () => {
     switch (size) {
       case "small":
@@ -66,10 +66,10 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
   return (
     <div className="w-full">
       <div className="relative py-2">
-        {/* Visualización del texto en modo de edición y en vivo */}
+        {/* Text display in edit and live mode */}
         <div>
           {isLiveMode ? (
-            /* Modo en vivo - solo visualización */
+            /* Live mode - view only */
             <div>
               {title ? (
                 <h2 className={`${getTitleClass()} text-gray-800 dark:text-gray-100 mb-2`}>
@@ -88,14 +88,14 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
               )}
             </div>
           ) : (
-            /* Modo de edición - campos editables */
+            /* Edit mode - editable fields */
             <div className="space-y-3">
               <div>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Título"
+                  placeholder="Title"
                   className={`w-full bg-transparent focus:outline-none ${getTitleClass()} py-1`}
                 />
               </div>
@@ -104,7 +104,7 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
                   type="text"
                   value={subtitle}
                   onChange={(e) => setSubtitle(e.target.value)}
-                  placeholder="Subtítulo"
+                  placeholder="Subtitle"
                   className={`w-full bg-transparent focus:outline-none ${getSubtitleClass()} py-1`}
                 />
               </div>
@@ -112,11 +112,11 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
           )}
         </div>
 
-        {/* Controles de tamaño - solo visibles en modo edición */}
+        {/* Size controls - only visible in edit mode */}
         {!isLiveMode && (
           <div className="flex justify-end space-x-2 mt-5 text-xs">
             <span className="text-gray-500 dark:text-gray-400 self-center mr-2">
-              Tamaño:
+              Size:
             </span>
             <button
               onClick={() => setSize("small")}
@@ -126,7 +126,7 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
-              Pequeño
+              Small
             </button>
             <button
               onClick={() => setSize("medium")}
@@ -136,7 +136,7 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
-              Mediano
+              Medium
             </button>
             <button
               onClick={() => setSize("large")}
@@ -146,7 +146,7 @@ const TextSection = ({ initialText, onChange, isLiveMode = false }: TextSectionP
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
-              Grande
+              Large
             </button>
           </div>
         )}

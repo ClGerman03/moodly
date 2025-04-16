@@ -13,7 +13,7 @@ interface SharePopupProps {
 }
 
 /**
- * Componente para compartir el tablero mediante una URL personalizada o invitando usuarios
+ * Component for sharing the board via a custom URL or by inviting users
  */
 const SharePopup: React.FC<SharePopupProps> = ({
   isOpen,
@@ -110,7 +110,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
     try {
       // Verificar que el slug sea válido
       if (!customUrlSegment || customUrlSegment.trim() === "") {
-        setPublishingError("Por favor, introduce un nombre válido para la URL");
+        setPublishingError("Please enter a valid name for the URL");
         return;
       }
       
@@ -138,8 +138,8 @@ const SharePopup: React.FC<SharePopupProps> = ({
         setShowUrlSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error("Error al publicar el tablero:", error);
-      setPublishingError("Ocurrió un error al publicar el tablero. Intenta de nuevo.");
+      console.error("Error publishing the board:", error);
+      setPublishingError("An error occurred while publishing the board. Please try again.");
     }
   };
   
@@ -179,7 +179,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
           >
             {/* Header */}
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 p-4">
-              <h2 className="text-xl font-light text-gray-800 dark:text-gray-200">Compartir tablero</h2>
+              <h2 className="text-xl font-light text-gray-800 dark:text-gray-200">Share Board</h2>
               <button 
                 onClick={() => {
                   // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
@@ -201,7 +201,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
               <div className="mb-6">
                 <div className="flex flex-col mb-2">
                   <label htmlFor="custom-url" className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                    Personaliza la URL de tu tablero
+                    Customize your board URL
                   </label>
                   <div className="flex items-center">
                     <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-l-md text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -224,7 +224,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                     >
-                      <LucideCheck size={14} className="mr-1" /> URL publicada correctamente
+                      <LucideCheck size={14} className="mr-1" /> URL successfully published
                     </motion.div>
                   )}
                 </div>
@@ -238,7 +238,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
                       : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
                   }`}
                 >
-                  {isPublished ? "Publicado" : "Publicar"}
+                  {isPublished ? "Published" : "Publish"}
                 </button>
                 
                 {/* Mensaje de error */}
@@ -259,7 +259,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
                 {isPublished && boardLink && (
                   <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-md">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Comparte este enlace:
+                      Share this link:
                     </p>
                     <div className="flex">
                       <input
@@ -271,11 +271,11 @@ const SharePopup: React.FC<SharePopupProps> = ({
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(boardLink);
-                          // Mostrar un mensaje temporal de copiado
-                          alert('Enlace copiado al portapapeles');
+                          // Show temporary message for copied link
+                          alert('Link copied to clipboard');
                         }}
                         className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-l-0 rounded-r-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        title="Copiar al portapapeles"
+                        title="Copy to clipboard"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -290,7 +290,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
               {/* Separador */}
               <div className="flex items-center my-6">
                 <div className="flex-grow h-px bg-gray-100 dark:bg-gray-800"></div>
-                <span className="mx-3 text-xs text-gray-400 dark:text-gray-500">o</span>
+                <span className="mx-3 text-xs text-gray-400 dark:text-gray-500">or</span>
                 <div className="flex-grow h-px bg-gray-100 dark:bg-gray-800"></div>
               </div>
               
@@ -298,7 +298,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
               <div>
                 <div className="flex flex-col mb-2">
                   <label htmlFor="user-email" className="text-xs text-gray-500 dark:text-gray-400 mb-1.5 flex items-center">
-                    <LucideUsers size={14} className="mr-1.5" /> Compartir con otras personas
+                    <LucideUsers size={14} className="mr-1.5" /> Share with others
                   </label>
                   <div className="flex">
                     <input
@@ -307,7 +307,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
                       className="flex-1 px-3 py-2 text-sm rounded-l-md border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
-                      placeholder="Correo o nombre de usuario"
+                      placeholder="Email or username"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && isValidEmail(userEmail)) {
                           handleAddUser();
@@ -352,7 +352,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
                     </ul>
                   ) : (
                     <p className="text-center py-3 text-xs text-gray-400 dark:text-gray-500">
-                      No has compartido este tablero con nadie
+                      You haven&apos;t shared this board with anyone
                     </p>
                   )}
                 </div>
@@ -361,7 +361,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
             
             {/* Footer */}
             <div className="border-t border-gray-100 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/40 text-xs text-gray-500 dark:text-gray-400 text-center">
-              Los usuarios con acceso podrán ver pero no editar el tablero
+              Users with access will be able to view but not edit the board
             </div>
           </motion.div>
         </motion.div>

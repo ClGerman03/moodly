@@ -25,12 +25,12 @@ const defaultColors = [
 
 const defaultPalette: ColorPalette = {
   id: "default",
-  name: "Mi paleta",
+  name: "My palette",
   colors: defaultColors
 };
 
 const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }: ColorPaletteProps) => {
-  // Inicializar con al menos una paleta por defecto si no hay paletas iniciales
+  // Initialize with at least one default palette if there are no initial palettes
   const [palettes, setPalettes] = useState<ColorPalette[]>(
     initialPalettes && initialPalettes.length > 0 
       ? initialPalettes 
@@ -44,10 +44,10 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
   const [isColorPickerLocked, setIsColorPickerLocked] = useState<boolean>(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
   
-  // Obtener la paleta activa
+  // Get the active palette
   const activePalette = palettes[activePaletteIndex];
   
-  // Actualizar un color en la paleta activa
+  // Update a color in the active palette
   const updateColor = (index: number, newColor: string) => {
     const updatedPalettes = [...palettes];
     updatedPalettes[activePaletteIndex].colors[index] = newColor;
@@ -55,15 +55,15 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
     onChange?.(updatedPalettes);
   };
   
-  // Agregar un nuevo color a la paleta activa
+  // Add a new color to the active palette
   const addColor = () => {
-    if (activePalette.colors.length < 8) { // Limitar a 8 colores máximo
+    if (activePalette.colors.length < 8) { // Limit to 8 colors maximum
       const updatedPalettes = [...palettes];
       updatedPalettes[activePaletteIndex].colors.push("#EEEEEE");
       setPalettes(updatedPalettes);
       onChange?.(updatedPalettes);
       
-      // Abrir el selector de color para el nuevo color
+      // Open the color picker for the new color
       setTimeout(() => {
         const newIndex = activePalette.colors.length;
         setEditingColorIndex(newIndex - 1);
@@ -74,9 +74,9 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
     }
   };
   
-  // Eliminar un color de la paleta activa
+  // Remove a color from the active palette
   const removeColor = (index: number) => {
-    if (activePalette.colors.length > 1) { // Mantener al menos un color
+    if (activePalette.colors.length > 1) { // Keep at least one color
       const updatedPalettes = [...palettes];
       updatedPalettes[activePaletteIndex].colors.splice(index, 1);
       setPalettes(updatedPalettes);
@@ -84,7 +84,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
     }
   };
   
-  // Actualizar el nombre de la paleta activa
+  // Update the name of the active palette
   const updatePaletteName = (newName: string) => {
     const updatedPalettes = [...palettes];
     updatedPalettes[activePaletteIndex].name = newName;
@@ -92,28 +92,28 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
     onChange?.(updatedPalettes);
   };
   
-  // Agregar una nueva paleta
+  // Add a new palette
   const addPalette = () => {
     const id = `palette-${Date.now()}`;
     const newPalette: ColorPalette = {
       id,
-      name: `Paleta ${palettes.length + 1}`,
-      colors: [...defaultColors] // Usar colores por defecto para la nueva paleta
+      name: `Palette ${palettes.length + 1}`,
+      colors: [...defaultColors] // Use default colors for the new palette
     };
     
     const updatedPalettes = [...palettes, newPalette];
     setPalettes(updatedPalettes);
-    setActivePaletteIndex(updatedPalettes.length - 1); // Activar la nueva paleta
+    setActivePaletteIndex(updatedPalettes.length - 1); // Activate the new palette
     onChange?.(updatedPalettes);
   };
   
-  // Eliminar la paleta activa
+  // Remove the active palette
   const removePalette = () => {
-    if (palettes.length > 1) { // Mantener al menos una paleta
+    if (palettes.length > 1) { // Keep at least one palette
       const updatedPalettes = palettes.filter((_, index) => index !== activePaletteIndex);
       setPalettes(updatedPalettes);
       
-      // Ajustar el índice activo si es necesario
+      // Adjust the active index if necessary
       if (activePaletteIndex >= updatedPalettes.length) {
         setActivePaletteIndex(updatedPalettes.length - 1);
       }
@@ -124,7 +124,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
   
   return (
     <div className="w-full bg-white dark:bg-gray-900 rounded-lg p-6">
-      {/* Selección de paleta y controles */}
+      {/* Palette selection and controls */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center">
           {isEditingName ? (
@@ -166,7 +166,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                   className={`w-2 h-2 rounded-full transition-all ${index === activePaletteIndex 
                     ? 'bg-gray-500 dark:bg-gray-300 scale-125' 
                     : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
-                  aria-label={`Seleccionar paleta ${index + 1}`}
+                  aria-label={`Select palette ${index + 1}`}
                 />
               ))}
             </div>
@@ -174,21 +174,21 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
         </div>
         
         <div className="flex items-center space-x-3">
-          {/* Información de colores */}
+          {/* Color information */}
           <div className="text-xs text-gray-400 dark:text-gray-500">
-            {activePalette.colors.length} colores
+            {activePalette.colors.length} colors
           </div>
           
-          {/* Controles de paleta */}
+          {/* Palette controls */}
           <div className="flex space-x-1">
-            {/* Botón para agregar paleta - oculto en modo live */}
+            {/* Button to add palette - hidden in live mode */}
             {!isLiveMode && (
               <motion.button 
                 onClick={addPalette} 
                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                aria-label="Agregar paleta"
+                aria-label="Add palette"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
@@ -196,14 +196,14 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
               </motion.button>
             )}
             
-            {/* Botón para eliminar paleta (solo si hay más de una) - oculto en modo live */}
+            {/* Button to remove palette (only if there is more than one) - hidden in live mode */}
             {palettes.length > 1 && !isLiveMode && (
               <motion.button 
                 onClick={removePalette} 
                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                aria-label="Eliminar paleta"
+                aria-label="Remove palette"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -214,7 +214,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
         </div>
       </div>
       
-      {/* Visualización de la paleta */}
+      {/* Palette visualization */}
       <div className="flex flex-wrap gap-3 mb-4">
         <AnimatePresence>
           {activePalette.colors.map((color, index) => (
@@ -232,18 +232,18 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                 style={{ backgroundColor: temporaryColor && editingColorIndex === index ? temporaryColor : color }}
                 onClick={() => {
                   if (!isLiveMode && !isColorPickerLocked) {
-                    // Si no estábamos editando este color, iniciamos la edición
+                    // If we weren't editing this color, start editing
                     if (editingColorIndex !== index) {
                       setEditingColorIndex(index);
-                      setTemporaryColor(color); // Inicializar el color temporal con el color actual
+                      setTemporaryColor(color); // Initialize temporary color with the current color
                       setTimeout(() => {
                         if (colorInputRef.current) {
                           colorInputRef.current.click();
                         }
                       }, 50);
                     } 
-                    // Si ya estábamos editando este color, no hacemos nada
-                    // ya que el onBlur del input se encargará de cerrar el selector
+                    // If we were already editing this color, do nothing
+                    // as the input's onBlur will take care of closing the picker
                   }
                 }}
                 whileHover={{ scale: 1.05 }}
@@ -255,25 +255,25 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                     type="color" 
                     value={temporaryColor || color}
                     onChange={(e) => {
-                      // Solo actualizamos el color temporal durante la selección
+                      // Only update the temporary color during selection
                       setTemporaryColor(e.target.value);
                     }}
                     onBlur={() => {
-                      // Al perder el foco, aplicamos el cambio final si hay un color temporal
+                      // When losing focus, apply the final change if there is a temporary color
                       if (temporaryColor) {
                         updateColor(index, temporaryColor);
                         setTemporaryColor(null);
                       }
                       setEditingColorIndex(null);
                       
-                      // Bloqueamos brevemente el selector para evitar reaperturas inmediatas
+                      // Briefly block the picker to prevent immediate reopenings
                       setIsColorPickerLocked(true);
                       setTimeout(() => {
                         setIsColorPickerLocked(false);
-                      }, 200); // 200ms debería ser suficiente para evitar la reapertura
+                      }, 200); // 200ms should be enough to prevent reopening
                     }}
                     className="absolute opacity-0"
-                    aria-label={`Cambiar color ${index + 1}`}
+                    aria-label={`Change color ${index + 1}`}
                   />
                 )}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 bg-black/20 w-full flex justify-center backdrop-blur-sm">
@@ -283,7 +283,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                 </div>
               </motion.div>
               
-              {/* Botón eliminar - oculto en modo live */}
+              {/* Remove button - hidden in live mode */}
               {activePalette.colors.length > 1 && !isLiveMode && (
                 <motion.button
                   className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white dark:bg-gray-800 shadow flex items-center justify-center text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -299,7 +299,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
             </motion.div>
           ))}
           
-          {/* Botón para agregar color - oculto en modo live */}
+          {/* Button to add color - hidden in live mode */}
           {activePalette.colors.length < 8 && !isLiveMode && (
             <motion.div 
               className="w-12 h-12 rounded-md border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center cursor-pointer"
@@ -315,9 +315,9 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
         </AnimatePresence>
       </div>
       
-      {/* Vista previa de la paleta en uso */}
+      {/* Preview of the palette in use */}
       <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg transition-all duration-300">
-        <h4 className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 font-light">Vista previa</h4>
+        <h4 className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 font-light">Preview</h4>
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
             {activePalette.colors.map((color, i) => (
@@ -331,7 +331,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
           
           <div className="flex h-16 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
             <div className="w-2/3 p-3" style={{ backgroundColor: activePalette.colors[0] }}>
-              <div className="text-xs font-medium mb-1" style={{ color: activePalette.colors[4] || activePalette.colors[activePalette.colors.length-1] }}>Ejemplo de título</div>
+              <div className="text-xs font-medium mb-1" style={{ color: activePalette.colors[4] || activePalette.colors[activePalette.colors.length-1] }}>Title example</div>
               <div className="w-full h-2 rounded-full" style={{ backgroundColor: activePalette.colors[1] }}></div>
               <div className="w-2/3 h-2 mt-1 rounded-full" style={{ backgroundColor: activePalette.colors[1] }}></div>
             </div>

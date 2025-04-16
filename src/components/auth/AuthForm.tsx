@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Formulario de autenticación
+ * Authentication Form
  * 
- * Componente que maneja la UI para la autenticación,
- * manteniendo el estilo minimalista de Moodly.
+ * Component that handles the UI for authentication,
+ * maintaining Moodly's minimalist style.
  */
 
 import { useState } from 'react'
@@ -17,7 +17,7 @@ export default function AuthForm() {
   
   return (
     <div className="w-full max-w-md mx-auto space-y-8">
-      {/* Logo de Moodly */}
+      {/* Moodly Logo */}
       <div className="flex flex-col items-center">
         <Link href="/" className="mb-6">
           <Image
@@ -31,46 +31,46 @@ export default function AuthForm() {
         </Link>
         
         <h1 className="text-2xl font-light text-gray-800 mb-2">
-          Bienvenido a Moodly
+          Welcome to Moodly
         </h1>
         <p className="text-gray-500 font-light text-center">
-          Inicia sesión para guardar y compartir tus tableros
+          Sign in to save and share your boards
         </p>
       </div>
       
-      {/* Mostrar error si existe */}
+      {/* Show error if it exists */}
       {error && (
         <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
           {error}
         </div>
       )}
       
-      {/* Botón de inicio de sesión con Google */}
+      {/* Google Sign In Button */}
       <div className="space-y-4">
         <GoogleSignInButton />
         
         <div className="text-center">
-          <span className="text-gray-500 text-xs">o</span>
+          <span className="text-gray-500 text-xs">or</span>
         </div>
         
         <Link 
           href="/tablero" 
           className="w-full flex justify-center px-6 py-2.5 text-white bg-gray-800 hover:bg-gray-700 rounded-full font-light tracking-wide transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 opacity-90 hover:opacity-100"
         >
-          Continuar sin registrarte
+          Continue without signing up
         </Link>
       </div>
       
-      {/* Información adicional */}
+      {/* Additional information */}
       <div className="text-center text-xs text-gray-400 mt-10">
         <p>
-          Al iniciar sesión, aceptas nuestros{' '}
+          By signing in, you accept our{' '}
           <Link href="/terminos" className="text-gray-500 underline hover:text-gray-700">
-            Términos de servicio
+            Terms of Service
           </Link>
-          {' '}y{' '}
+          {' '}and{' '}
           <Link href="/privacidad" className="text-gray-500 underline hover:text-gray-700">
-            Política de privacidad
+            Privacy Policy
           </Link>
         </p>
       </div>

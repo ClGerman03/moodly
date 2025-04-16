@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Botón de inicio de sesión con Google
+ * Google Sign In Button
  * 
- * Componente reutilizable para iniciar sesión con Google
- * siguiendo el estilo minimalista de Moodly.
+ * Reusable component for signing in with Google
+ * following Moodly's minimalist style.
  */
 
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,7 +18,7 @@ interface GoogleSignInButtonProps {
 
 export default function GoogleSignInButton({ 
   className = '', 
-  text = 'Iniciar sesión con Google' 
+  text = 'Sign in with Google' 
 }: GoogleSignInButtonProps) {
   const { signInWithGoogle } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
@@ -28,7 +28,7 @@ export default function GoogleSignInButton({
       setIsLoading(true)
       await signInWithGoogle()
     } catch (error) {
-      console.error('Error en inicio de sesión con Google:', error)
+      console.error('Error signing in with Google:', error)
     } finally {
       setIsLoading(false)
     }

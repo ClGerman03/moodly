@@ -10,7 +10,7 @@ interface AddSectionProps {
   onAddSection: (type: SectionType) => void;
 }
 
-// Definición de opciones de sección con iconos
+// Definition of section options with icons
 interface SectionOption {
   type: SectionType;
   label: string;
@@ -22,11 +22,11 @@ const AddSection = ({ onAddSection }: AddSectionProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   
-  // Opciones de sección con sus respectivos iconos
+  // Section options with their respective icons
   const sectionOptions: SectionOption[] = [
     { 
       type: "imageGallery", 
-      label: "Galería de Imágenes", 
+      label: "Image Gallery", 
       icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
     },
     { 
@@ -36,17 +36,17 @@ const AddSection = ({ onAddSection }: AddSectionProps) => {
     },
     { 
       type: "links", 
-      label: "Enlaces", 
+      label: "Links", 
       icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`
     },
     { 
       type: "typography", 
-      label: "Tipografía", 
+      label: "Typography", 
       icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>`
     },
     { 
       type: "text", 
-      label: "Texto", 
+      label: "Text", 
       icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>`
     }
   ];
@@ -87,7 +87,7 @@ const AddSection = ({ onAddSection }: AddSectionProps) => {
         whileTap={{ y: 1 }}
       >
         <span className="text-xs font-light text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors duration-200">
-          + Agregar sección
+          + Add Section
         </span>
       </motion.div>
 
@@ -104,7 +104,7 @@ const AddSection = ({ onAddSection }: AddSectionProps) => {
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
           >
-            {/* Vista vertical para todos los dispositivos */}
+            {/* Vertical view for all devices */}
             <div className="space-y-2">
               {sectionOptions.map((option) => (
                 <motion.div 

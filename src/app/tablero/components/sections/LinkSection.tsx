@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 interface LinkItem {
   id: string;
   url: string;
-  title: string; // Título personalizado opcional
-  description: string; // Descripción o motivo del enlace
+  title: string; // Optional custom title
+  description: string; // Description or reason for the link
   type: "spotify" | "youtube" | "twitter" | "threads" | "instagram" | "other";
 }
 
@@ -24,14 +24,14 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
   const [newDescription, setNewDescription] = useState("");
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   
-  // Maneja el clic en un enlace en modo en vivo
+  // Handles clicking on a link in live mode
   const handleLinkClick = (url: string) => {
     if (isLiveMode) {
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
   
-  // Detectar automáticamente el tipo de enlace
+  // Automatically detect the link type
   const detectLinkType = (url: string): LinkItem["type"] => {
     if (url.includes("spotify.com")) return "spotify";
     if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
@@ -41,7 +41,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
     return "other";
   };
   
-  // Extraer título sugerido del enlace
+  // Extract suggested title from the link
   const getSuggestedTitle = (url: string, type: LinkItem["type"]): string => {
     try {
       const urlObj = new URL(url);
@@ -60,22 +60,22 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
           return urlObj.hostname.replace("www.", "");
       }
     } catch {
-      return "Enlace";
+      return "Link";
     }
   };
   
-  // Agregar un nuevo enlace
+  // Add a new link
   const handleAddLink = () => {
     if (!newUrl.trim()) return;
     
-    // Intenta formatear la URL si no tiene http/https
+    // Try to format the URL if it doesn't have http/https
     let formattedUrl = newUrl;
     if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
       formattedUrl = "https://" + formattedUrl;
     }
     
     try {
-      // Verificar si es una URL válida
+      // Verify if it's a valid URL
       new URL(formattedUrl);
       
       const type = detectLinkType(formattedUrl);
@@ -83,7 +83,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
         id: `link-${Date.now()}`,
         url: formattedUrl,
         title: getSuggestedTitle(formattedUrl, type),
-        description: newDescription.trim() || "Enlace añadido",
+        description: newDescription.trim() || "Link added",
         type
       };
       
@@ -94,26 +94,26 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
       setIsAddingLink(false);
       onChange?.(updatedLinks);
     } catch {
-      // URL inválida, mostramos un mensaje sutil
-      alert("Por favor, ingresa una URL válida");
+      // Invalid URL, we show a subtle message
+      alert("Please enter a valid URL");
     }
   };
 
-  // Cancelar la adición de un nuevo enlace
+  // Cancel adding a new link
   const handleCancelAdd = () => {
     setNewUrl("");
     setNewDescription("");
     setIsAddingLink(false);
   };
   
-  // Eliminar un enlace
+  // Remove a link
   const handleRemoveLink = (id: string) => {
     const updatedLinks = links.filter(link => link.id !== id);
     setLinks(updatedLinks);
     onChange?.(updatedLinks);
   };
   
-  // Actualizar el título de un enlace
+  // Update a link title
   const handleUpdateTitle = (id: string, newTitle: string) => {
     const updatedLinks = links.map(link => 
       link.id === id ? { ...link, title: newTitle } : link
@@ -122,7 +122,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
     onChange?.(updatedLinks);
   };
 
-  // Actualizar la descripción de un enlace
+  // Update a link description
   const handleUpdateDescription = (id: string, newDescription: string) => {
     const updatedLinks = links.map(link => 
       link.id === id ? { ...link, description: newDescription } : link
@@ -131,7 +131,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
     onChange?.(updatedLinks);
   };
   
-  // Obtener ícono para el tipo de enlace
+  // Get icon for the link type
   const getLinkIcon = (type: LinkItem["type"]) => {
     switch (type) {
       case "spotify":
@@ -190,7 +190,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
-                placeholder="URL del enlace"
+                placeholder="Link URL"
                 className="flex-1 py-1 px-2 text-sm font-light bg-transparent border-b border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 text-gray-700 dark:text-gray-300"
                 autoFocus
               />
@@ -202,7 +202,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
-                placeholder="Descripción (opcional)"
+                placeholder="Description (optional)"
                 className="flex-1 py-1 px-2 text-sm font-light bg-transparent border-b border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 text-gray-700 dark:text-gray-300"
               />
             </div>
@@ -214,7 +214,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
                 whileTap={{ scale: 0.95 }}
                 className="px-2 py-1 text-xs font-light text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
-                Cancelar
+                Cancel
               </motion.button>
               <motion.button
                 onClick={handleAddLink}
@@ -222,14 +222,14 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
                 whileTap={{ scale: 0.95 }}
                 className="px-2 py-1 text-xs font-light bg-gray-100/80 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/70 transition-colors"
               >
-                Agregar
+                Add
               </motion.button>
             </div>
           </motion.div>
         </AnimatePresence>
       )}
       
-      {/* Lista de enlaces */}
+      {/* List of links */}
       <div className="space-y-2 mb-4">
         <AnimatePresence>
           {links.map((link) => (
@@ -277,7 +277,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
                     transition={{ duration: 0.15 }}
                     className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors ml-2"
                     onClick={() => handleRemoveLink(link.id)}
-                    aria-label="Eliminar enlace"
+                    aria-label="Remove link"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -292,13 +292,13 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
         {links.length === 0 && !isAddingLink && (
           <div className="text-center py-6">
             <p className="text-sm font-light text-gray-400 dark:text-gray-500">
-              Agrega enlaces a tus plataformas favoritas
+              Add links to your favorite platforms
             </p>
           </div>
         )}
       </div>
       
-      {/* Botón para agregar enlaces (en la parte inferior) */}
+      {/* Button to add links (at the bottom) */}
       {!isAddingLink && !isLiveMode && (
         <div className={`flex ${links.length > 0 ? 'justify-end' : 'justify-center'} mt-2`}>
           <motion.button
@@ -310,7 +310,7 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
             <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
-            Agregar
+            Add
           </motion.button>
         </div>
       )}

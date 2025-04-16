@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { LucideFileText, LucideEye } from "lucide-react";
 import PdfExportPopup from "./popups/PdfExportPopup";
-import ProfilePopover from "./popups/ProfilePopover";
+import ProfilePopover from "../../../components/ui/popups/ProfilePopover";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ConfigButtonProps {
@@ -14,7 +14,7 @@ interface ConfigButtonProps {
   tooltip?: string;
 }
 
-// Componente para botones de configuración con icono
+// Component for configuration buttons with icon
 const ConfigButton: React.FC<ConfigButtonProps> = ({ icon, onClick, active = false, tooltip }) => {
   return (
     <div className="relative group">
@@ -40,7 +40,7 @@ interface ShareButtonProps {
   onClick?: () => void;
 }
 
-// Componente para el botón de compartir con texto
+// Component for the share button with text
 const ShareButton: React.FC<ShareButtonProps> = ({ onClick }) => {
   return (
     <motion.button
@@ -49,7 +49,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ onClick }) => {
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
     >
-      Compartir
+      Share
     </motion.button>
   );
 };
@@ -63,20 +63,20 @@ interface ConfigPanelProps {
 }
 
 /**
- * Panel de configuración principal que muestra acciones disponibles
+ * Main configuration panel that displays available actions
  */
 const ConfigPanel: React.FC<ConfigPanelProps> = ({ 
   isLiveMode = false, 
   onToggleLiveMode = () => {},
   onShare = () => {}
 }) => {
-  // Obtener el estado de autenticación
+  // Get authentication state
   const { user } = useAuth();
   
-  // Estado para controlar la visibilidad del popup de PDF
+  // State to control PDF popup visibility
   const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
   
-  // Manejadores para el popup de exportar a PDF
+  // Handlers for PDF export popup
   const handleOpenPdfPopup = () => {
     setIsPdfPopupOpen(true);
   };
@@ -89,39 +89,39 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   
   return (
     <div className="flex flex-row items-center">
-      {/* Botón de modo live - siempre visible */}
+      {/* Live mode button - always visible */}
       <ConfigButton 
         icon={<LucideEye className="w-5 h-5" strokeWidth={1} />}
         onClick={onToggleLiveMode}
         active={isLiveMode}
-        tooltip="Modo visualización"
+        tooltip="View mode"
       />
       
-      {/* Resto de botones - solo visibles cuando NO está en modo live */}
+      {/* Other buttons - only visible when NOT in live mode */}
       {!isLiveMode && (
         <>
-          {/* Botón de exportar a PDF */}
+          {/* Export to PDF button */}
           <ConfigButton 
             icon={<LucideFileText className="w-5 h-5" strokeWidth={1} />}
             onClick={handleOpenPdfPopup}
-            tooltip="Exportar a PDF"
+            tooltip="Export to PDF"
           />
           
-          {/* Botón de compartir con texto */}
+          {/* Share button with text */}
           <ShareButton onClick={onShare} />
         </>
       )}
       
-      {/* Botón de perfil - siempre visible si hay un usuario */}
+      {/* Profile button - always visible if there's a user */}
       {user && (
         <div className="ml-4">
           <ProfilePopover user={user} />
         </div>
       )}
       
-      {/* El Popup de compartir ahora se maneja desde el componente padre */}
+      {/* The Share Popup is now managed from the parent component */}
       
-      {/* Popup de exportar a PDF */}
+      {/* PDF export popup */}
       <PdfExportPopup
         isOpen={isPdfPopupOpen}
         onClose={handleClosePdfPopup}

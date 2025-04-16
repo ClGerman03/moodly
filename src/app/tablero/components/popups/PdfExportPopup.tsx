@@ -10,7 +10,7 @@ interface PdfExportPopupProps {
 }
 
 /**
- * Componente para exportar el tablero a un documento PDF
+ * Component for exporting the board to a PDF document
  */
 const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
   isOpen,
@@ -124,7 +124,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
             {/* Header */}
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 p-4">
               <h2 className="text-xl font-light text-gray-800 dark:text-gray-200 flex items-center">
-                <LucideFileText size={18} className="mr-2" strokeWidth={1.5} /> Exportar a PDF
+                <LucideFileText size={18} className="mr-2" strokeWidth={1.5} /> Export to PDF
               </h2>
               <button 
                 onClick={() => {
@@ -147,7 +147,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                 {/* Tamaño de página */}
                 <div className="space-y-1.5">
                   <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                    Tamaño de página
+                    Page Size
                   </label>
                   <div className="flex space-x-2">
                     <button
@@ -168,7 +168,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                       }`}
                       onClick={() => setPageSize("letter")}
                     >
-                      Carta
+                      Letter
                     </button>
                     <button
                       className={`flex-1 py-1.5 px-2 text-xs rounded-md transition-colors ${
@@ -186,7 +186,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                 {/* Orientación */}
                 <div className="space-y-1.5">
                   <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                    Orientación
+                    Orientation
                   </label>
                   <div className="flex space-x-2">
                     <button
@@ -197,7 +197,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                       }`}
                       onClick={() => setOrientation("portrait")}
                     >
-                      Vertical
+                      Portrait
                     </button>
                     <button
                       className={`flex-1 py-1.5 px-2 text-xs rounded-md transition-colors ${
@@ -207,7 +207,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                       }`}
                       onClick={() => setOrientation("landscape")}
                     >
-                      Horizontal
+                      Landscape
                     </button>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                 {/* Calidad */}
                 <div className="space-y-1.5">
                   <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                    Calidad
+                    Quality
                   </label>
                   <div className="flex space-x-2">
                     <button
@@ -226,7 +226,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                       }`}
                       onClick={() => setQuality("draft")}
                     >
-                      Borrador
+                      Draft
                     </button>
                     <button
                       className={`flex-1 py-1.5 px-2 text-xs rounded-md transition-colors ${
@@ -246,7 +246,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                       }`}
                       onClick={() => setQuality("high")}
                     >
-                      Alta
+                      High
                     </button>
                   </div>
                 </div>
@@ -254,7 +254,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                 {/* Opciones adicionales */}
                 <div className="space-y-1.5">
                   <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                    Opciones adicionales
+                    Additional Options
                   </label>
                   <div className="space-y-2">
                     <div className="flex items-center">
@@ -266,7 +266,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                         className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:focus:ring-blue-600"
                       />
                       <label htmlFor="include-header" className="ml-2 text-xs text-gray-600 dark:text-gray-300">
-                        Incluir encabezado y pie de página
+                        Include header and footer
                       </label>
                     </div>
                     <div className="flex items-center">
@@ -278,7 +278,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                         className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:focus:ring-blue-600"
                       />
                       <label htmlFor="include-page-numbers" className="ml-2 text-xs text-gray-600 dark:text-gray-300">
-                        Incluir números de página
+                        Include page numbers
                       </label>
                     </div>
                   </div>
@@ -314,17 +314,17 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Generando PDF...
+                      Generating PDF...
                     </>
                   ) : isGenerated ? (
                     <>
                       <LucideCheck size={16} className="mr-1.5" />
-                      PDF Generado
+                      PDF Generated
                     </>
                   ) : (
                     <>
                       <LucideDownload size={16} className="mr-1.5" />
-                      Generar PDF
+                      Generate PDF
                     </>
                   )}
                 </button>
@@ -334,7 +334,7 @@ const PdfExportPopup: React.FC<PdfExportPopupProps> = ({
             {/* Footer */}
             <div className="border-t border-gray-100 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/40 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center">
               <LucideSettings size={14} className="mr-1.5" strokeWidth={1.5} />
-              <span>Personaliza más opciones en la configuración</span>
+              <span>Customize more options in settings</span>
             </div>
           </motion.div>
         </motion.div>

@@ -8,7 +8,7 @@ interface AddImageButtonProps {
 }
 
 /**
- * Botón para agregar nuevas imágenes a la galería
+ * Button to add new images to the gallery
  */
 const AddImageButton: React.FC<AddImageButtonProps> = ({ onClick }) => {
   return (
@@ -19,7 +19,7 @@ const AddImageButton: React.FC<AddImageButtonProps> = ({ onClick }) => {
       onClick={onClick}
     >
       <Plus size={20} className="mr-2" />
-      Agregar imágenes
+      Add images
     </motion.button>
   );
 };

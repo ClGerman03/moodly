@@ -10,15 +10,15 @@ export default function Home() {
   const router = useRouter();
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Manejar la transición suave hacia la página de autenticación
+  // Handle smooth transition to the authentication page
   const handleCreateBoard = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setIsTransitioning(true);
     
-    // Esperar a que termine la animación antes de navegar
+    // Wait for the animation to finish before navigating
     setTimeout(() => {
       router.push("/auth");
-    }, 400); // Duración de la animación
+    }, 400); // Animation duration
   };
 
   return (
@@ -29,7 +29,7 @@ export default function Home() {
       transition={{ duration: 0.4, ease: "easeInOut" }}
     >
       <main className="flex flex-col items-center justify-center w-full max-w-md mx-auto text-center space-y-10">
-        {/* Imagen sin fondo circular */}
+        {/* Logo image with transparent background */}
         <Image
           src="/images/Moodly.png"
           alt="Moodly-Logo"
@@ -41,10 +41,10 @@ export default function Home() {
         
         <div className="space-y-4 transition-all duration-500">
           <h1 className="text-3xl md:text-4xl font-light tracking-wide text-gray-800">
-            Crea tu tablero Moodly
+            Create your Moodly board
           </h1>
           <p className="text-gray-500 font-light">
-            En segundos sin registrarte
+            In seconds without signing up
           </p>
         </div>
 
@@ -53,11 +53,11 @@ export default function Home() {
           className="px-6 py-2.5 text-white bg-gray-800 hover:bg-gray-700 rounded-full font-light tracking-wide transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 opacity-90 hover:opacity-100"
           onClick={handleCreateBoard}
         >
-          Crear tablero
+          Create Board
         </Link>
 
         <div className="text-xs text-gray-400 dark:text-gray-500 mt-8 font-light">
-          Diseña • Comparte • Inspira
+          Design • Share • Inspire
         </div>
       </main>
     </motion.div>

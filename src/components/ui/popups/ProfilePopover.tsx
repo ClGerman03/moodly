@@ -148,12 +148,12 @@ export default function ProfilePopover({ user }: ProfilePopoverProps) {
                 {isLoading ? (
                   <>
                     <LucideLoader className="w-4 h-4 animate-spin" />
-                    <span>Cerrando sesión...</span>
+                    <span>Loading...</span>
                   </>
                 ) : (
                   <>
                     <LucideLogOut className="w-4 h-4" />
-                    <span>Cerrar sesión</span>
+                    <span>Logout</span>
                   </>
                 )}
               </button>

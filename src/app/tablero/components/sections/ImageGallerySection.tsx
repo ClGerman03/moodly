@@ -6,11 +6,11 @@ import { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { ImageMetadata } from "./gallery/types";
 import ImageDetailPopup from "../popups/ImageDetailPopup";
 
-// Importación de hooks personalizados
+// Custom hooks import
 import { useDeviceDetection } from "../hooks/useDeviceDetection";
 import { useImageUpload } from "../hooks/useImageUpload";
 
-// Importación de componentes
+// Components import
 import MobileGallery from "./gallery/MobileGallery";
 import DesktopGallery from "./gallery/DesktopGallery";
 import AddImageButton from "./gallery/AddImageButton";
@@ -27,7 +27,7 @@ interface ImageGallerySectionProps {
 }
 
 /**
- * Componente de galería de imágenes con funcionalidad de arrastre y organización
+ * Image gallery component with drag and organization functionality
  */
 const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   images,
@@ -39,17 +39,17 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   isLiveMode = false,
   onReorder = () => {}
 }) => {
-  // Detección de dispositivo (móvil vs desktop)
+  // Device detection (mobile vs desktop)
   const isMobileDevice = useDeviceDetection();
 
-  // Estados básicos
+  // Basic states
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [touchedImage, setTouchedImage] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isDetailPopupOpen, setIsDetailPopupOpen] = useState<boolean>(false);
   
-  // Gestión de carga de imágenes
+  // Image loading management
   const { 
     handleDropFiles, 
     handleFileInputChange, 
@@ -60,27 +60,27 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     fileInputRef 
   });
   
-  // Manejadores de eventos para ambas vistas
+  // Event handlers for both views
   
-  // Manejar clic en imagen
+  // Handle image click
   const handleImageClick = (index: number) => {
     if (isLiveMode) return;
     
     const imageUrl = images[index];
     
-    // Comportamiento diferente para dispositivos táctiles vs. mouse
+    // Different behavior for touch devices vs. mouse
     if (isMobileDevice) {
-      // En dispositivos móviles, solo alternamos el estado de selección
-      // para mostrar/ocultar las opciones. Nunca abrimos el popup directamente.
+      // On mobile devices, we only toggle the selection state
+      // to show/hide options. We never open the popup directly.
       setTouchedImage(touchedImage === imageUrl ? null : imageUrl);
     } else {
-      // En dispositivos no táctiles, abrir directamente el popup
+      // On non-touch devices, open the popup directly
       setSelectedImageIndex(index);
       setIsDetailPopupOpen(true);
     }
   };
   
-  // Drag and drop en desktop
+  // Drag and drop on desktop
   const handleDragStart = (event: DragStartEvent) => {
     if (isLiveMode) return;
     
@@ -94,12 +94,12 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      // Encontrar los índices
+      // Find indices
       const activeIndex = images.findIndex(url => `image-${url}` === active.id);
       const overIndex = images.findIndex(url => `image-${url}` === over.id);
       
       if (activeIndex !== -1 && overIndex !== -1) {
-        // Usar función de reordenamiento proporcionada por el padre
+        // Use reordering function provided by parent
         onReorder([...images.slice(0, activeIndex), ...images.slice(activeIndex + 1)].slice(0, overIndex).concat(images[activeIndex]).concat([...images.slice(0, activeIndex), ...images.slice(activeIndex + 1)].slice(overIndex)));
       }
     }
@@ -107,58 +107,58 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     setActiveId(null);
   };
   
-  // Mover imagen hacia arriba (para dispositivos móviles)
+  // Move image up (for mobile devices)
   const handleMoveUp = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (index > 0) {
       const newImages = [...images];
-      // Intercambiar con la imagen anterior
+      // Swap with previous image
       [newImages[index-1], newImages[index]] = [newImages[index], newImages[index-1]];
       onReorder(newImages);
     }
   };
   
-  // Mover imagen hacia abajo (para dispositivos móviles)
+  // Move image down (for mobile devices)
   const handleMoveDown = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (index < images.length - 1) {
       const newImages = [...images];
-      // Intercambiar con la imagen siguiente
+      // Swap with next image
       [newImages[index], newImages[index+1]] = [newImages[index+1], newImages[index]];
       onReorder(newImages);
     }
   };
   
-  // Expandir imagen
+  // Expand image
   const handleImageExpand = (index: number, e?: React.MouseEvent) => {
-    // Asegurarnos de detener la propagación del evento
+    // Make sure to stop event propagation
     if (e) {
       e.stopPropagation();
       
-      // En dispositivos móviles, sólo deberíamos abrir el popup
-      // cuando el evento proviene explícitamente del botón de expandir
-      // y no del evento de click en la imagen
+      // On mobile devices, we should only open the popup
+      // when the event comes explicitly from the expand button
+      // and not from the click event on the image
       const isFromExpandButton = 
         e.currentTarget && 
         ((e.currentTarget as HTMLElement).classList.contains('bg-gray-800/90') ||
          (e.currentTarget as HTMLElement).classList.contains('bg-red-500/90'));
       
-      // Solo abrimos el popup si:
-      // 1. Estamos en desktop (no es móvil)
-      // 2. O estamos en móvil pero el click vino del botón expandir específicamente
+      // We only open the popup if:
+      // 1. We are on desktop (not mobile)
+      // 2. Or we are on mobile but the click came from the expand button specifically
       if (!isMobileDevice || isFromExpandButton) {
         setSelectedImageIndex(index);
         setIsDetailPopupOpen(true);
       }
     } else if (!isMobileDevice) {
-      // Si no hay evento (e) y no estamos en móvil, procedemos normalmente
-      // (esto puede ocurrir en algunos casos programáticos)
+      // If there is no event (e) and we are not on mobile, we proceed normally
+      // (this can occur in some programmatic cases)
       setSelectedImageIndex(index);
       setIsDetailPopupOpen(true);
     }
   };
   
-  // Eliminar imagen
+  // Remove image
   const handleImageRemove = (index: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     onImageRemove(index);
@@ -176,7 +176,7 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropFiles}
       >
-        {/* Renderizado condicional basado en tipo de dispositivo */}
+        {/* Conditional rendering based on device type */}
         {isMobileDevice ? (
           <MobileGallery
             images={images}
@@ -208,7 +208,7 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
           />
         )}
 
-        {/* Popup para detalles de imagen */}
+        {/* Popup for image details */}
         <AnimatePresence>
           {isDetailPopupOpen && selectedImageIndex !== null && (
             <ImageDetailPopup
@@ -230,12 +230,12 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
           )}
         </AnimatePresence>
         
-        {/* Botón para agregar más imágenes y input file oculto */}
+        {/* Button to add more images and hidden file input */}
         {!isLiveMode && (
           <>
             <AddImageButton onClick={triggerFileDialog} />
             
-            {/* Input invisible para selección de archivos */}
+            {/* Invisible input for file selection */}
             <input
               type="file"
               accept="image/*"

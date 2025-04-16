@@ -33,7 +33,8 @@ export async function middleware(req: NextRequest) {
     '/tablero/guardar',     // Guardar un tablero (requiere cuenta)
     '/tablero/compartir',   // Compartir un tablero (requiere cuenta)
     '/perfil',              // Acceso al perfil de usuario
-    '/mis-tableros'         // Lista de tableros guardados
+    '/mis-tableros',        // Lista de tableros guardados
+    '/dashboard'            // Dashboard de tableros del usuario
   ];
 
   // 2. Rutas de autenticación específicas
@@ -61,6 +62,9 @@ export async function middleware(req: NextRequest) {
   // Redireccionar según estado de sesión y tipo de ruta
   // 1. Si intenta acceder a una operación protegida sin sesión
   if (isProtectedOperation && !session) {
+    // Log para depuración
+    console.log(`Redirección de ruta protegida: ${path} - sin sesión`);
+    
     // Guardar la URL actual para redirigir de vuelta después del login
     const returnUrl = encodeURIComponent(req.url);
     return NextResponse.redirect(new URL(`/auth?returnUrl=${returnUrl}`, requestUrl.origin));
