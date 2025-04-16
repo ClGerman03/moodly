@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 type Position = { x: number, y: number } | null;
 
@@ -14,7 +14,7 @@ interface UseDraggableGridReturn {
   touchedItem: string | null;
   
   // Funciones para escritorio
-  handleDragStart: (e: React.DragEvent<HTMLElement>, index: number, itemId: string) => void;
+  handleDragStart: (e: React.DragEvent<HTMLElement>, index: number) => void;
   handleDragOver: (e: React.DragEvent<HTMLElement>, index: number) => void;
   handleDragLeave: () => void;
   handleDragEnd: () => void;
@@ -23,7 +23,7 @@ interface UseDraggableGridReturn {
   // Funciones para móvil (touch)
   handleTouchStart: (index: number, itemId: string, e: React.TouchEvent, isHandle?: boolean) => void;
   handleTouchMove: (index: number, e: React.TouchEvent) => void;
-  handleTouchEnd: (index: number, e: React.TouchEvent) => void;
+  handleTouchEnd: () => void;
   handleDragHandleTouchStart: (index: number, itemId: string, e: React.TouchEvent) => void;
   
   // Función para iniciar arrastre desde handle en desktop
@@ -57,7 +57,8 @@ export function useDraggableGrid({
   const [touchDragEnabled, setTouchDragEnabled] = useState<boolean>(false);
   const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
   const [touchStartPos, setTouchStartPos] = useState<Position>(null);
-  const [touchCurrentPos, setTouchCurrentPos] = useState<Position>(null);
+  // Variable usada internamente pero no en renderizado
+  // const [touchCurrentPos, setTouchCurrentPos] = useState<Position>(null);
   
   // Función para reordenar elementos
   const reorderItems = (sourceIndex: number, targetIndex: number) => {
@@ -77,7 +78,6 @@ export function useDraggableGrid({
     setTouchDragEnabled(false);
     setTouchDragIndex(null);
     setTouchStartPos(null);
-    setTouchCurrentPos(null);
     setIsDraggingHandle(false);
     
     // Restaurar el scroll del documento
@@ -94,7 +94,7 @@ export function useDraggableGrid({
   };
   
   // Manejar arrastre de elementos (Desktop)
-  const handleDragStart = (e: React.DragEvent<HTMLElement>, index: number, itemId: string) => {
+  const handleDragStart = (e: React.DragEvent<HTMLElement>, index: number) => {
     if (isLiveMode || !isDraggingHandle) return;
     
     e.dataTransfer.setData('text/plain', index.toString());
@@ -173,7 +173,6 @@ export function useDraggableGrid({
     
     const touch = e.touches[0];
     const currentPos = { x: touch.clientX, y: touch.clientY };
-    setTouchCurrentPos(currentPos);
     
     // Solo procesar movimiento si está en modo arrastre
     if (touchDragEnabled && touchDragIndex !== null) {
@@ -205,7 +204,7 @@ export function useDraggableGrid({
     }
   };
   
-  const handleTouchEnd = (index: number, e: React.TouchEvent) => {
+  const handleTouchEnd = () => {
     // Si estábamos en modo arrastre y tenemos un índice destino, reordenar
     if (touchDragEnabled && touchDragIndex !== null && dragOverIndex !== null && dragOverIndex !== touchDragIndex) {
       reorderItems(touchDragIndex, dragOverIndex);
@@ -230,9 +229,9 @@ export function useDraggableGrid({
   };
   
   // Helper para cancelar arrastre manualmente
-  const cancelDrag = () => {
+  const cancelDrag = useCallback(() => {
     resetDragState();
-  };
+  }, []);
   
   // Añadir estilos CSS necesarios para el arrastre
   useEffect(() => {
@@ -298,7 +297,7 @@ export function useDraggableGrid({
       // Asegurar que se restauren los estilos si el hook se desmonta mientras hay un arrastre activo
       resetDragState();
     };
-  }, [touchDragEnabled, isDraggingHandle]);
+  }, [touchDragEnabled, isDraggingHandle, cancelDrag]);
   
   return {
     // Estados

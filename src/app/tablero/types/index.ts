@@ -1,6 +1,6 @@
 // Tipos compartidos para los componentes del tablero
 
-export type SectionType = "bento" | "palette" | "links" | "typography" | "text" | "imageGallery";
+export type SectionType = "palette" | "links" | "typography" | "text" | "imageGallery";
 
 export type TextSize = "small" | "medium" | "large";
 
@@ -37,6 +37,9 @@ export interface FontOption {
   weights: number[];
 }
 
+// Tipo para el tamaño de vista previa de tipografía
+export type PreviewSize = "sm" | "md" | "lg";
+
 // Interfaz para secciones del tablero
 export interface Section {
   id: string;
@@ -51,5 +54,7 @@ export interface Section {
     links?: LinkItem[];
     fonts?: FontOption[];
     textContent?: TextContent;
+    previewSize?: PreviewSize; // Tamaño para la vista previa de tipografía
+    previewText?: string; // Texto de ejemplo para la vista previa de tipografía
   };
 }

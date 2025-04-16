@@ -1,32 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Image from "next/image";
-import { Trash2, Plus, Maximize2, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
-import { ImageMetadata } from "./types/bento";
+import { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import { ImageMetadata } from "./gallery/types";
 import ImageDetailPopup from "../popups/ImageDetailPopup";
 
-// Importaciones de dnd-kit solo para desktop
-import {
-  DndContext, 
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  rectSortingStrategy
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+// Importación de hooks personalizados
+import { useDeviceDetection } from "../hooks/useDeviceDetection";
+import { useImageUpload } from "../hooks/useImageUpload";
+
+// Importación de componentes
+import MobileGallery from "./gallery/MobileGallery";
+import DesktopGallery from "./gallery/DesktopGallery";
+import AddImageButton from "./gallery/AddImageButton";
 
 interface ImageGallerySectionProps {
   images: string[];
@@ -41,7 +28,6 @@ interface ImageGallerySectionProps {
 
 /**
  * Componente de galería de imágenes con funcionalidad de arrastre y organización
- * implementado con dnd-kit para simplificar la lógica y mejorar la experiencia.
  */
 const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   images,
@@ -53,46 +39,48 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   isLiveMode = false,
   onReorder = () => {}
 }) => {
+  // Detección de dispositivo (móvil vs desktop)
+  const isMobileDevice = useDeviceDetection();
+
   // Estados básicos
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [touchedImage, setTouchedImage] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isDetailPopupOpen, setIsDetailPopupOpen] = useState<boolean>(false);
-  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
   
-  // Referencias
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Gestión de carga de imágenes
+  const { 
+    handleDropFiles, 
+    handleFileInputChange, 
+    triggerFileDialog 
+  } = useImageUpload({ 
+    isLiveMode, 
+    onImagesAdd, 
+    fileInputRef 
+  });
   
-  // Detectar si es dispositivo móvil
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobileDevice(window.matchMedia('(pointer: coarse)').matches);
-    };
+  // Manejadores de eventos para ambas vistas
+  
+  // Manejar clic en imagen
+  const handleImageClick = (index: number) => {
+    if (isLiveMode) return;
     
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
+    const imageUrl = images[index];
     
-    return () => {
-      window.removeEventListener('resize', checkIfMobile);
-    };
-  }, []);
+    // Comportamiento diferente para dispositivos táctiles vs. mouse
+    if (isMobileDevice) {
+      // En dispositivos móviles, solo alternamos el estado de selección
+      // para mostrar/ocultar las opciones. Nunca abrimos el popup directamente.
+      setTouchedImage(touchedImage === imageUrl ? null : imageUrl);
+    } else {
+      // En dispositivos no táctiles, abrir directamente el popup
+      setSelectedImageIndex(index);
+      setIsDetailPopupOpen(true);
+    }
+  };
   
-  // Configuración de sensores para dnd-kit (solo desktop)
-  const sensors = useSensors(
-    // Sensor de puntero optimizado para desktop
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,     // Iniciar arrastre después de 8px de movimiento
-      }
-    }),
-    // Soporte para navegación por teclado
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
-    })
-  );
-  
-  // Manejar inicio de arrastre
+  // Drag and drop en desktop
   const handleDragStart = (event: DragStartEvent) => {
     if (isLiveMode) return;
     
@@ -100,7 +88,6 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     setActiveId(active.id as string);
   };
   
-  // Manejar fin de arrastre
   const handleDragEnd = (event: DragEndEvent) => {
     if (isLiveMode) return;
     
@@ -111,38 +98,13 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
       const activeIndex = images.findIndex(url => `image-${url}` === active.id);
       const overIndex = images.findIndex(url => `image-${url}` === over.id);
       
-      // Reorganizar el array usando la utilidad de dnd-kit
-      const newImages = arrayMove(images, activeIndex, overIndex);
-      
-      // Notificar nuevo orden
-      onReorder(newImages);
+      if (activeIndex !== -1 && overIndex !== -1) {
+        // Usar función de reordenamiento proporcionada por el padre
+        onReorder([...images.slice(0, activeIndex), ...images.slice(activeIndex + 1)].slice(0, overIndex).concat(images[activeIndex]).concat([...images.slice(0, activeIndex), ...images.slice(activeIndex + 1)].slice(overIndex)));
+      }
     }
     
     setActiveId(null);
-  };
-  
-  // Manejar clic en imagen
-  const handleImageClick = (index: number) => {
-    if (isLiveMode) return;
-    
-    const imageUrl = images[index];
-    
-    // Comportamiento diferente para dispositivos táctiles vs. mouse
-    if (isMobileDevice) {
-      if (touchedImage === imageUrl) {
-        // Si ya estaba seleccionada, abrir el popup
-        setSelectedImageIndex(index);
-        setIsDetailPopupOpen(true);
-        setTouchedImage(null);
-      } else {
-        // Alternar el estado de tocado
-        setTouchedImage(touchedImage === imageUrl ? null : imageUrl);
-      }
-    } else {
-      // En dispositivos no táctiles, abrir directamente el popup
-      setSelectedImageIndex(index);
-      setIsDetailPopupOpen(true);
-    }
   };
   
   // Mover imagen hacia arriba (para dispositivos móviles)
@@ -167,50 +129,39 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     }
   };
   
-  // Manejar botones de acción
-  const handleExpandImage = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedImageIndex(index);
-    setIsDetailPopupOpen(true);
-  };
-  
-  const handleRemoveImage = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onImageRemove(index);
-  };
-  
-  // Manejar archivos y subida de imágenes
-  const handleFiles = (files: FileList) => {
-    if (isLiveMode) return;
-    
-    const newImages: string[] = [];
-    
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const objectUrl = URL.createObjectURL(file);
-        newImages.push(objectUrl);
+  // Expandir imagen
+  const handleImageExpand = (index: number, e?: React.MouseEvent) => {
+    // Asegurarnos de detener la propagación del evento
+    if (e) {
+      e.stopPropagation();
+      
+      // En dispositivos móviles, sólo deberíamos abrir el popup
+      // cuando el evento proviene explícitamente del botón de expandir
+      // y no del evento de click en la imagen
+      const isFromExpandButton = 
+        e.currentTarget && 
+        ((e.currentTarget as HTMLElement).classList.contains('bg-gray-800/90') ||
+         (e.currentTarget as HTMLElement).classList.contains('bg-red-500/90'));
+      
+      // Solo abrimos el popup si:
+      // 1. Estamos en desktop (no es móvil)
+      // 2. O estamos en móvil pero el click vino del botón expandir específicamente
+      if (!isMobileDevice || isFromExpandButton) {
+        setSelectedImageIndex(index);
+        setIsDetailPopupOpen(true);
       }
-    });
-    
-    if (newImages.length > 0) {
-      onImagesAdd(newImages);
-    }
-    
-    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    } else if (!isMobileDevice) {
+      // Si no hay evento (e) y no estamos en móvil, procedemos normalmente
+      // (esto puede ocurrir en algunos casos programáticos)
+      setSelectedImageIndex(index);
+      setIsDetailPopupOpen(true);
     }
   };
   
-  // Manejar archivos soltados en la zona
-  const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    
-    if (isLiveMode) return;
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
-    }
+  // Eliminar imagen
+  const handleImageRemove = (index: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    onImageRemove(index);
   };
   
   return (
@@ -221,161 +172,40 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
       transition={{ type: "spring", damping: 20, stiffness: 300 }}
     >
       <div 
-        ref={containerRef}
         className="relative w-full"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropFiles}
       >
+        {/* Renderizado condicional basado en tipo de dispositivo */}
         {isMobileDevice ? (
-          // Versión simplificada para móviles con botones en vez de arrastre
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {images.map((url, index) => {
-              const metadata = imageMetadata.get(url);
-              
-              return (
-                <div 
-                  key={`image-${url}-${index}`}
-                  className={`relative group rounded-xl overflow-hidden shadow-sm bg-white h-60
-                  transition-all duration-200`}
-                  onClick={() => handleImageClick(index)}
-                  onMouseEnter={() => setHoveredImage(url)}
-                  onMouseLeave={() => setHoveredImage(null)}
-                >
-                  {/* Imagen */}
-                  <div className="h-full w-full">
-                    <Image
-                      src={url}
-                      fill
-                      alt={metadata?.title || `Imagen ${index + 1}`}
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
-                    />
-                  </div>
-                  
-                  {/* Overlay para título - siempre visible */}
-                  {metadata?.title && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
-                      <p className="text-sm text-white font-medium truncate">{metadata.title}</p>
-                    </div>
-                  )}
-                  
-                  {/* Controles para móvil - visibles al tocar */}
-                  {!isLiveMode && touchedImage === url && (
-                    <motion.div 
-                      className="absolute top-0 left-0 w-full h-full bg-white/20"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <div className="absolute top-2 right-2 flex gap-2">
-                        {/* Botones para mover hacia arriba/abajo */}
-                        <div className="flex flex-col gap-1">
-                          <motion.button
-                            className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-                            whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => handleMoveUp(index, e)}
-                            disabled={index === 0}
-                            style={{ opacity: index === 0 ? 0.5 : 1 }}
-                          >
-                            <ArrowUp size={16} />
-                          </motion.button>
-                          
-                          <motion.button
-                            className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-                            whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => handleMoveDown(index, e)}
-                            disabled={index === images.length - 1}
-                            style={{ opacity: index === images.length - 1 ? 0.5 : 1 }}
-                          >
-                            <ArrowDown size={16} />
-                          </motion.button>
-                        </div>
-                        
-                        {/* Botón para expandir */}
-                        <motion.button
-                          className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedImageIndex(index);
-                            setIsDetailPopupOpen(true);
-                          }}
-                        >
-                          <Maximize2 size={16} />
-                        </motion.button>
-                        
-                        {/* Botón para eliminar */}
-                        <motion.button
-                          className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onImageRemove(index);
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <MobileGallery
+            images={images}
+            imageMetadata={imageMetadata}
+            hoveredImage={hoveredImage}
+            touchedImage={touchedImage}
+            isLiveMode={isLiveMode}
+            onImageClick={handleImageClick}
+            onHover={setHoveredImage}
+            onMoveUp={handleMoveUp}
+            onMoveDown={handleMoveDown}
+            onImageExpand={handleImageExpand}
+            onImageRemove={handleImageRemove}
+          />
         ) : (
-          // Versión completa con dnd-kit para desktop
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
+          <DesktopGallery
+            images={images}
+            imageMetadata={imageMetadata}
+            hoveredImage={hoveredImage}
+            touchedImage={touchedImage}
+            activeId={activeId}
+            isLiveMode={isLiveMode}
+            onImageClick={handleImageClick}
+            onHover={setHoveredImage}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
-          >
-            <SortableContext 
-              items={images.map(url => `image-${url}`)} 
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {images.map((url, index) => {
-                  const metadata = imageMetadata.get(url);
-                  const itemId = `image-${url}`;
-                  
-                  return (
-                    <SortableImageItem
-                      key={itemId}
-                      id={itemId}
-                      url={url}
-                      index={index}
-                      metadata={metadata}
-                      isLiveMode={isLiveMode}
-                      isHovered={hoveredImage === url}
-                      isTouched={touchedImage === url}
-                      onHover={setHoveredImage}
-                      onClick={() => handleImageClick(index)}
-                      onRemove={() => onImageRemove(index)}
-                      onExpand={() => {
-                        setSelectedImageIndex(index);
-                        setIsDetailPopupOpen(true);
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </SortableContext>
-            
-            {/* Overlay de arrastre */}
-            <DragOverlay adjustScale style={{ transformOrigin: '0 0' }}>
-              {activeId ? (
-                <DraggingImageItem 
-                  url={activeId.replace('image-', '')}
-                  metadata={imageMetadata.get(activeId.replace('image-', ''))} 
-                />
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+            onImageRemove={handleImageRemove}
+            onImageExpand={handleImageExpand}
+          />
         )}
 
         {/* Popup para detalles de imagen */}
@@ -400,186 +230,24 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
           )}
         </AnimatePresence>
         
-        {/* Botón para agregar más imágenes */}
+        {/* Botón para agregar más imágenes y input file oculto */}
         {!isLiveMode && (
-          <motion.button
-            className="mt-4 flex items-center justify-center w-full h-14 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 bg-white/50 backdrop-blur-sm hover:bg-gray-100 hover:border-gray-400 hover:text-gray-700 transition-all duration-200"
-            whileHover={{ scale: 1.01, backgroundColor: '#f3f4f6' }}
-            whileTap={{ scale: 0.99 }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Plus size={20} className="mr-2" />
-            Agregar imágenes
-          </motion.button>
+          <>
+            <AddImageButton onClick={triggerFileDialog} />
+            
+            {/* Input invisible para selección de archivos */}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleFileInputChange}
+              ref={fileInputRef}
+            />
+          </>
         )}
       </div>
     </motion.div>
-  );
-};
-
-// Componente para cada imagen sortable
-const SortableImageItem = ({ 
-  id, 
-  url, 
-  index, 
-  metadata, 
-  isLiveMode, 
-  isHovered, 
-  isTouched, 
-  onHover, 
-  onClick, 
-  onRemove, 
-  onExpand 
-}: { 
-  id: string; 
-  url: string; 
-  index: number; 
-  metadata?: ImageMetadata; 
-  isLiveMode: boolean; 
-  isHovered: boolean; 
-  isTouched: boolean; 
-  onHover: (url: string | null) => void; 
-  onClick: () => void; 
-  onRemove: () => void; 
-  onExpand: () => void;
-}) => {
-  // Usar el hook sortable de dnd-kit
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id,
-    disabled: isLiveMode,
-    // Mejorar la experiencia táctil
-    animateLayoutChanges: () => false, // Evita animaciones que puedan afectar el rendimiento
-  });
-  
-  // Aplicar estilos de transformación con la utilidad de dnd-kit
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-    touchAction: 'none', // Prevenir scroll mientras se arrastra
-  };
-  
-  // Detener propagación para botones
-  const handleButtonClick = (e: React.MouseEvent, callback: () => void) => {
-    e.stopPropagation();
-    callback();
-  };
-  
-  return (
-    <motion.div 
-      ref={setNodeRef}
-      style={style}
-      className={`relative group rounded-xl overflow-hidden shadow-sm bg-white h-60
-                transition-all duration-200 ${isDragging ? 'opacity-50 ring-2 ring-blue-500' : 'opacity-100'}`}
-      onClick={onClick}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", damping: 20, stiffness: 300, delay: index * 0.05 }}
-      onMouseEnter={() => onHover(url)}
-      onMouseLeave={() => onHover(null)}
-    >
-      {/* Imagen */}
-      <div className="h-full w-full">
-        <Image
-          src={url}
-          fill
-          alt={metadata?.title || `Imagen ${index + 1}`}
-          className="object-cover"
-          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
-        />
-      </div>
-      
-      {/* Overlay para título - siempre visible */}
-      {metadata?.title && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
-          <p className="text-sm text-white font-medium truncate">{metadata.title}</p>
-        </div>
-      )}
-      
-      {/* Controles - Solo visibles al hacer hover o tocar en móvil */}
-      {!isLiveMode && (isHovered || isTouched) && (
-        <motion.div 
-          className="absolute top-0 left-0 w-full h-full bg-white/20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div className="absolute top-2 right-2 flex gap-2">
-            {/* Botón de arrastre visible en todos los dispositivos */}
-            <motion.button
-              className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full cursor-grab active:cursor-grabbing touch-manipulation"
-              whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-              whileTap={{ scale: 0.9 }}
-              {...attributes}
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-              onTouchStart={(e) => {
-                // Prevenir comportamiento por defecto en móviles que pueda interferir
-                e.stopPropagation();
-              }}
-              style={{ touchAction: 'none' }} // Crucial para dispositivos táctiles
-            >
-              <GripVertical size={16} />
-            </motion.button>
-            
-            {/* Botón para expandir */}
-            <motion.button
-              className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-              whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => handleButtonClick(e, onExpand)}
-            >
-              <Maximize2 size={16} />
-            </motion.button>
-            
-            {/* Botón para eliminar */}
-            <motion.button
-              className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-              whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => handleButtonClick(e, onRemove)}
-            >
-              <Trash2 size={16} />
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
-
-// Componente para la vista de arrastre
-const DraggingImageItem = ({ 
-  url, 
-  metadata 
-}: { 
-  url: string; 
-  metadata?: ImageMetadata;
-}) => {
-  return (
-    <div className="relative rounded-xl overflow-hidden shadow-lg bg-white h-60 w-72 opacity-90 scale-95 rotate-1">
-      <div className="h-full w-full">
-        <Image
-          src={url}
-          fill
-          alt={metadata?.title || 'Imagen'}
-          className="object-cover"
-          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
-        />
-      </div>
-      {metadata?.title && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
-          <p className="text-sm text-white font-medium truncate">{metadata.title}</p>
-        </div>
-      )}
-    </div>
   );
 };
 

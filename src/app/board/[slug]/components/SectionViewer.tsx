@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import SectionManager from "@/app/tablero/components/SectionManager";
 import { Section } from "@/app/tablero/types";
 
 // Importar componentes específicos de feedback
 import BentoImageFeedback from "./feedback/BentoImageFeedback";
 import ColorPaletteFeedback from "./feedback/ColorPaletteFeedback";
+import LinkSectionFeedback from "./feedback/LinkSectionFeedback";
+import TypographyFeedback from "./feedback/TypographyFeedback";
+import TextSectionFeedback from "./feedback/TextSectionFeedback";
 
 interface SectionViewerProps {
   section: Section;
@@ -39,7 +41,7 @@ const SectionViewer: React.FC<SectionViewerProps> = ({
       {/* Contenedor para la sección */}
       <div className="bg-white rounded-lg">
         {/* Usar componente específico según el tipo de sección */}
-        {section.type === "bento" ? (
+        {section.type === "imageGallery" ? (
           <BentoImageFeedback 
             section={section}
             onFeedback={onFeedback}
@@ -49,17 +51,27 @@ const SectionViewer: React.FC<SectionViewerProps> = ({
             section={section}
             onFeedback={onFeedback}
           />
-        ) : (
-          // Para otros tipos de secciones, seguimos usando el SectionManager por ahora
-          <SectionManager
-            fileInputRef={{ current: null }} // Placeholder, no se usa en modo live
-            isLiveMode={true}
-            initialSections={[section]}
+        ) : section.type === "links" ? (
+          <LinkSectionFeedback
+            section={section}
+            onFeedback={onFeedback}
           />
+        ) : section.type === "typography" ? (
+          <TypographyFeedback
+            section={section}
+            onFeedback={onFeedback}
+          />
+        ) : section.type === "text" ? (
+          <TextSectionFeedback
+            section={section}
+            onFeedback={onFeedback}
+          />
+        ) : (
+          <div className="p-4 text-center text-gray-500">
+            Tipo de sección no soportada
+          </div>
         )}
       </div>
-      
-      {/* En esta área se agregarán futuras interacciones específicas para cada tipo de sección */}
     </motion.div>
   );
 };

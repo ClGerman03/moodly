@@ -28,33 +28,34 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
   
   return (
     <motion.div 
-      className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4"
+      className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 text-center">
+      <div className="w-full max-w-md mx-auto">
         <motion.div
+          className="flex flex-col items-center text-center"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <h1 className="text-2xl font-light text-gray-800 dark:text-gray-100 mb-2">
+          <h1 className="text-2xl font-light text-gray-700 dark:text-gray-300 mb-3">
             Bienvenido al tablero
           </h1>
           
-          <h2 className="text-3xl font-medium text-gray-900 dark:text-white mb-6">
+          <h2 className="text-3xl font-light text-gray-800 dark:text-gray-100 mb-6">
             {boardName}
           </h2>
           
-          <p className="text-gray-600 dark:text-gray-300 mb-8">
+          <p className="text-gray-500 dark:text-gray-400 font-light mb-10 max-w-sm">
             Has sido invitado a revisar este tablero y proporcionar tu feedback. 
             Te mostraremos diferentes secciones para que puedas compartir tu opinión.
           </p>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="client-name" className="block text-sm text-gray-600 dark:text-gray-400 text-left mb-1">
+          <form onSubmit={handleSubmit} className="w-full space-y-6">
+            <div className="w-full">
+              <label htmlFor="client-name" className="block text-sm text-gray-500 dark:text-gray-400 text-center mb-2 font-light">
                 ¿Cómo te llamas?
               </label>
               <input
@@ -66,19 +67,24 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
                   if (error) setError("");
                 }}
                 placeholder="Escribe tu nombre"
-                className="w-full px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-colors"
+                className="w-full py-2 text-xl text-center text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600 bg-transparent outline-none focus:outline-none border-b border-gray-200 dark:border-gray-700 transition-all duration-300"
                 autoFocus
               />
               {error && (
-                <p className="text-red-500 text-sm mt-1 text-left">
+                <motion.p 
+                  className="text-red-500 dark:text-red-400 text-sm mt-2 text-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
                   {error}
-                </p>
+                </motion.p>
               )}
             </div>
             
             <button
               type="submit"
-              className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-auto px-6 py-2 mx-auto mt-4 text-sm font-light text-white dark:text-gray-100 transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500 focus:ring-offset-2 transform hover:scale-[1.02] opacity-90 hover:opacity-100 flex items-center justify-center"
             >
               Comenzar revisión
             </button>

@@ -2,9 +2,10 @@
 
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import SimpleBentoImageGrid from './sections/SimpleBentoImageGrid';
 import ImageGallerySection from './sections/ImageGallerySection';
-import { ImageLayout } from './sections/types/bento';
+
+// Define the ImageLayout type locally instead of importing from a non-existent module
+type ImageLayout = "square" | "vertical" | "horizontal";
 import ColorPaletteComponent from './sections/ColorPalette';
 import LinkSection from './sections/LinkSection';
 import TypographySection from './sections/TypographySection';
@@ -45,8 +46,7 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
   // Manejar la adición de una nueva sección
   const handleAddSection = (type: SectionType) => {
     // Asignar titulo predeterminado segun el tipo
-    const defaultTitle = type === "bento" ? "Bento Images" : 
-                     type === "imageGallery" ? "Galería de Imágenes" :
+    const defaultTitle = type === "imageGallery" ? "Galería de Imágenes" :
                      type === "palette" ? "Color Palette" : 
                      type === "typography" ? "Tipografía" : 
                      type === "text" ? "Texto" : "Enlaces";
@@ -54,9 +54,7 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
     // Preparar datos iniciales según el tipo de sección
     let initialData: Record<string, unknown> = {};
     
-    if (type === "bento") {
-      initialData = { images: [], imageLayouts: {}, imageMetadata: {} };
-    } else if (type === "links") {
+    if (type === "links") {
       initialData = { links: [] };
     } else if (type === "typography") {
       initialData = { fonts: [] };
@@ -199,16 +197,16 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
     });
   };
 
-  // Cambiar el layout de una imagen en una sección específica
-  const handleLayoutChange = (sectionId: string, index: number, layout: ImageLayout) => {
-    const section = sections.find(s => s.id === sectionId);
-    if (!section || !section.data) return;
-    
-    const currentLayouts = section.data.imageLayouts || {};
-    updateSectionData(sectionId, { 
-      imageLayouts: { ...currentLayouts, [index]: layout }
-    });
-  };
+  // Función no utilizada actualmente, pero se mantiene comentada para implementación futura
+  // const handleLayoutChange = (sectionId: string, index: number, layout: ImageLayout) => {
+  //   const section = sections.find(s => s.id === sectionId);
+  //   if (!section || !section.data) return;
+  //   
+  //   const currentLayouts = section.data.imageLayouts || {};
+  //   updateSectionData(sectionId, { 
+  //     imageLayouts: { ...currentLayouts, [index]: layout }
+  //   });
+  // };
   
   // Manejar cambios en los metadatos de una imagen
   const handleImageMetadataChange = (sectionId: string, imageUrl: string, metadata: ImageMetadata) => {
@@ -290,31 +288,6 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
           >
             {renderSectionTitle(section)}
             <ImageGallerySection 
-              images={section.data?.images || []} 
-              imageMetadata={new Map(Object.entries(section.data?.imageMetadata || {}).map(([key, value]) => [key, value]))}
-              onImagesAdd={(newImages: string[]) => handleImagesUpdate(section.id, newImages)}
-              onImageRemove={(index: number) => handleImageRemove(section.id, index)}
-              onImageMetadataChange={(imageUrl: string, metadata: ImageMetadata) => handleImageMetadataChange(section.id, imageUrl, metadata)}
-              onReorder={(reorderedImages: string[]) => handleImagesReorder(section.id, reorderedImages)}
-              fileInputRef={fileInputRef}
-              isLiveMode={isLiveMode}
-            />
-          </motion.div>
-        );
-      case "bento":
-        return (
-          <motion.div 
-            key={section.id} 
-            className="mt-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            onMouseEnter={() => setHoveredSectionId(section.id)}
-            onMouseLeave={() => setHoveredSectionId(null)}
-          >
-            {renderSectionTitle(section)}
-            <SimpleBentoImageGrid 
               images={section.data?.images || []} 
               imageMetadata={new Map(Object.entries(section.data?.imageMetadata || {}).map(([key, value]) => [key, value]))}
               onImagesAdd={(newImages: string[]) => handleImagesUpdate(section.id, newImages)}

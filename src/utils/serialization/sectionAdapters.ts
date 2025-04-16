@@ -52,87 +52,39 @@ function processBlobUrls(url: string): string {
  */
 const sectionAdapters: Record<SectionType, SectionAdapter> = {
   imageGallery: {
-    prepareForStorage: (section: Section): Section => {
-      console.log("Preparando sección imageGallery para almacenamiento", section);
-      
-      // Procesar imágenes si existen
-      const processedImages = section.data?.images?.map(processBlobUrls);
-      
-      // Verificar si imageMetadata es un Map y convertirlo a objeto
-      const imageMetadata = section.data?.imageMetadata 
-        ? (section.data.imageMetadata instanceof Map
-            ? Object.fromEntries(section.data.imageMetadata)
-            : section.data.imageMetadata)
-        : undefined;
-      
-      // Asegúrate de que la estructura de datos esté completa para la reconstrucción
+    prepareForStorage(section: Section): Section {
+      const { data, ...rest } = section;
+      if (!data) return section;
+
+      // Convertir las URLs de blob a data URLs si es necesario
+      const processedImages = data.images?.map(processBlobUrls) || [];
+
+      // Asegurarse de que imageMetadata sea un objeto plano
+      const imageMetadata = data.imageMetadata || {};
+
       return {
-        ...section,
+        ...rest,
         data: {
-          ...section.data,
+          ...data,
           images: processedImages,
           imageMetadata,
+          // Agregar layouts por defecto para compatibilidad con BentoImageFeedback
+          imageLayouts: Object.fromEntries(
+            processedImages.map((_, index) => [index, 'square'])
+          )
         }
       };
     },
-    prepareForDisplay: (section: Section): Section => {
-      console.log("Preparando sección imageGallery para visualización", section);
-      
+    prepareForDisplay(section: Section): Section {
+      const { data, ...rest } = section;
+      if (!data) return section;
+
       return {
-        ...section,
+        ...rest,
         data: {
-          ...section.data,
-          // No convertimos a Map para evitar problemas de tipos
-          // Los componentes verifican el tipo y actúan en consecuencia
-        }
-      };
-    }
-  },
-  bento: {
-    prepareForStorage: (section: Section): Section => {
-      console.log("Preparando sección bento para almacenamiento", section);
-      
-      // Procesar imágenes si existen
-      const processedImages = section.data?.images?.map(processBlobUrls);
-      
-      // Verificar si imageLayouts es un Map y convertirlo a objeto
-      const imageLayouts = section.data?.imageLayouts 
-        ? (section.data.imageLayouts instanceof Map
-            ? Object.fromEntries(section.data.imageLayouts)
-            : section.data.imageLayouts)
-        : undefined;
-      
-      // Verificar si imageMetadata es un Map y convertirlo a objeto
-      const imageMetadata = section.data?.imageMetadata 
-        ? (section.data.imageMetadata instanceof Map
-            ? Object.fromEntries(section.data.imageMetadata)
-            : section.data.imageMetadata)
-        : undefined;
-      
-      // Asegúrate de que la estructura de datos esté completa para la reconstrucción
-      return {
-        ...section,
-        data: {
-          ...section.data,
-          images: processedImages,
-          imageLayouts,
-          imageMetadata,
-        }
-      };
-    },
-    prepareForDisplay: (section: Section): Section => {
-      console.log("Preparando sección bento para visualización", section);
-      
-      // Mantener los layouts como objetos de javascript para compatibilidad con los componentes
-      // BentoImageFeedback ha sido modificado para manejar tanto Maps como objetos
-      // Esto evita problemas de tipos y mantiene la compatibilidad
-      
-      return {
-        ...section,
-        data: {
-          ...section.data,
-          // No convertimos a Map para evitar problemas de tipos
-          // Los componentes ahora verifican el tipo y actúan en consecuencia
+          ...data,
+          imageMetadata: data.imageMetadata || {},
+          imageLayouts: data.imageLayouts || {}
         }
       };
     }
@@ -165,24 +117,90 @@ const sectionAdapters: Record<SectionType, SectionAdapter> = {
   typography: {
     prepareForStorage: (section: Section): Section => {
       console.log("Preparando sección typography para almacenamiento", section);
-      // TypographySection usa estructuras simples que serializan bien
-      return section;
+      const { data, ...rest } = section;
+      if (!data) return section;
+      
+      // Asegurarnos de que se serialicen correctamente todas las propiedades importantes
+      return {
+        ...rest,
+        data: {
+          ...data,
+          fonts: data.fonts || [],
+          previewSize: data.previewSize || "md", // Asegurarnos de que previewSize se serialice
+          previewText: data.previewText || "La tipografía es el arte y técnica de elegir y usar tipos." // Asegurarnos de que previewText se serialice
+        }
+      };
     },
     prepareForDisplay: (section: Section): Section => {
       console.log("Preparando sección typography para visualización", section);
-      return section;
+      const { data, ...rest } = section;
+      if (!data) return section;
+      
+      // Asegurarnos de que todas las propiedades estén presentes para su visualización
+      return {
+        ...rest,
+        data: {
+          ...data,
+          fonts: data.fonts || [],
+          previewSize: data.previewSize || "md", // Valor por defecto si no existe
+          previewText: data.previewText || "La tipografía es el arte y técnica de elegir y usar tipos." // Valor por defecto si no existe
+        }
+      };
     }
   },
   
   text: {
     prepareForStorage: (section: Section): Section => {
       console.log("Preparando sección text para almacenamiento", section);
-      // TextSection usa estructuras simples que serializan bien
-      return section;
+      const { data, ...rest } = section;
+      if (!data) return section;
+      
+      // Asegurarnos de que textContent existe y tiene los campos necesarios
+      const defaultTextContent = {
+        title: "",
+        subtitle: "",
+        size: "medium" as const
+      };
+      
+      return {
+        ...rest,
+        data: {
+          ...data,
+          textContent: data.textContent 
+            ? {
+                title: data.textContent.title || defaultTextContent.title,
+                subtitle: data.textContent.subtitle || defaultTextContent.subtitle,
+                size: data.textContent.size || defaultTextContent.size
+              }
+            : defaultTextContent
+        }
+      };
     },
     prepareForDisplay: (section: Section): Section => {
       console.log("Preparando sección text para visualización", section);
-      return section;
+      const { data, ...rest } = section;
+      if (!data) return section;
+      
+      // Asegurarnos de que textContent existe para la visualización
+      const defaultTextContent = {
+        title: "",
+        subtitle: "",
+        size: "medium" as const
+      };
+      
+      return {
+        ...rest,
+        data: {
+          ...data,
+          textContent: data.textContent 
+            ? {
+                title: data.textContent.title || defaultTextContent.title,
+                subtitle: data.textContent.subtitle || defaultTextContent.subtitle,
+                size: data.textContent.size || defaultTextContent.size
+              }
+            : defaultTextContent
+        }
+      };
     }
   }
 };
@@ -250,9 +268,10 @@ export const sanitizeForJson = (data: unknown): unknown => {
         result[key] = sanitizeForJson(value);
       }
     });
+    
     return result;
   }
   
-  // Para valores primitivos, devolver tal cual
+  // Para valores primitivos, simplemente los devolvemos tal cual
   return data;
 };

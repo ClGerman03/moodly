@@ -31,24 +31,11 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
   const [isCommentMode, setIsCommentMode] = useState<boolean>(false);
   const [comment, setComment] = useState<string>("");
   const [isMobile, setIsMobile] = useState<boolean>(false);
-  const [dragDirection, setDragDirection] = useState<number>(0);
   
   // Obtener las paletas del section
   const palettes = useMemo(() => {
     return section.data?.palettes as ColorPalette[] || [];
   }, [section.data?.palettes]);
-  
-  // Si no hay paletas, mostrar un mensaje
-  if (!palettes.length) {
-    return (
-      <div className="py-8 text-center text-gray-500">
-        Este tablero no contiene paletas de color
-      </div>
-    );
-  }
-  
-  // Obtener la paleta activa
-  const activePalette = palettes[activePaletteIndex];
   
   // Detectar si estamos en dispositivo móvil
   useEffect(() => {
@@ -63,7 +50,19 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
       window.removeEventListener('resize', checkMobile);
     };
   }, []);
-
+  
+  // Si no hay paletas, mostrar un mensaje
+  if (!palettes.length) {
+    return (
+      <div className="py-8 text-center text-gray-500">
+        Este tablero no contiene paletas de color
+      </div>
+    );
+  }
+  
+  // Obtener la paleta activa
+  const activePalette = palettes[activePaletteIndex];
+  
   // Función para manejar el cambio de paleta
   const handlePaletteChange = (newIndex: number) => {
     if (newIndex >= 0 && newIndex < palettes.length) {
@@ -79,10 +78,8 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
     
     // Detectar dirección del deslizamiento (izquierda o derecha)
     if (info.offset.x < -50) { // Deslizamiento hacia la izquierda -> siguiente paleta
-      setDragDirection(1);
       handlePaletteChange(activePaletteIndex + 1);
     } else if (info.offset.x > 50) { // Deslizamiento hacia la derecha -> paleta anterior
-      setDragDirection(-1);
       handlePaletteChange(activePaletteIndex - 1);
     }
   };
