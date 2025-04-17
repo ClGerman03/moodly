@@ -60,7 +60,18 @@ const sectionAdapters: Record<SectionType, SectionAdapter> = {
       const processedImages = data.images?.map(processBlobUrls) || [];
 
       // Asegurarse de que imageMetadata sea un objeto plano
-      const imageMetadata = data.imageMetadata || {};
+      // y que preserve las etiquetas de las imágenes
+      const imageMetadata = Object.fromEntries(
+        Object.entries(data.imageMetadata || {}).map(([key, value]) => {
+          // Asegurarse de que las etiquetas sean arrays
+          const metadata = value as { title?: string; description?: string; tags?: string[] };
+          return [key, {
+            title: metadata.title || '',
+            description: metadata.description || '',
+            tags: Array.isArray(metadata.tags) ? metadata.tags : []
+          }];
+        })
+      );
 
       return {
         ...rest,
@@ -79,11 +90,25 @@ const sectionAdapters: Record<SectionType, SectionAdapter> = {
       const { data, ...rest } = section;
       if (!data) return section;
 
+      // En la preparación para visualización, asegurarse de que las etiquetas
+      // se preserven correctamente
+      const processedMetadata = data.imageMetadata ? 
+        Object.fromEntries(
+          Object.entries(data.imageMetadata).map(([key, value]) => {
+            const metadata = value as any;
+            return [key, {
+              title: metadata.title || '',
+              description: metadata.description || '',
+              tags: Array.isArray(metadata.tags) ? metadata.tags : []
+            }];
+          })
+        ) : {};
+
       return {
         ...rest,
         data: {
           ...data,
-          imageMetadata: data.imageMetadata || {},
+          imageMetadata: processedMetadata,
           imageLayouts: data.imageLayouts || {}
         }
       };

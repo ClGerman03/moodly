@@ -5,6 +5,9 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import ImageTagsEditor from "./ImageTagsEditor";
+import ImageTags from "./ImageTags";
+import { useMediaQuery } from "@/app/tablero/hooks/useMediaQuery";
 
 interface ImageDetailPopupProps {
   isOpen: boolean;
@@ -12,7 +15,8 @@ interface ImageDetailPopupProps {
   imageUrl: string;
   initialTitle?: string;
   initialDescription?: string;
-  onSave: (title: string, description: string) => void;
+  initialTags?: string[];
+  onSave: (title: string, description: string, tags: string[]) => void;
   isLiveMode?: boolean;
 }
 
@@ -86,24 +90,41 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   imageUrl,
   initialTitle = "",
   initialDescription = "",
+  initialTags = [],
   onSave,
   isLiveMode = false,
 }) => {
+  // Guardamos los valores iniciales para referencia y comparación
+  const [initialValues] = useState({
+    title: initialTitle || "",
+    description: initialDescription || "",
+    tags: initialTags || [],
+  });
+  
+  // Estados simplificados sin isSaving
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
+  const [tags, setTags] = useState<string[]>(initialTags);
   const [editingTitle, setEditingTitle] = useState(false);
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [lastSavedState, setLastSavedState] = useState({ title: initialTitle, description: initialDescription, tags: initialTags });
+  
+  // Detectar si es un dispositivo móvil
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const popupRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  // Simplificamos a un solo timeout para guardado
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Configuración del editor de texto enriquecido
+  // Configuración del editor de texto enriquecido - simplificada al máximo
   const editor = useEditor({
     extensions: [StarterKit],
     content: initialDescription,
+    // Solución al error de SSR
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      // Solo actualizar el estado local sin guardar
+      // Actualizar el estado local inmediatamente sin guardar automáticamente
       const html = editor.getHTML();
       setDescription(html);
     },
@@ -120,17 +141,25 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
       editor.setEditable(!isLiveMode);
     }
   }, [editor, isLiveMode]);
-
-  // Manejar cambios en el estado del popup o la imagen
+  
+  // Manejar cambios en el estado del popup o la imagen - solo al montar o cuando cambia isOpen
   useEffect(() => {
     if (!isOpen) return;
     
-    // Cuando el popup se abre, configuramos el editor con los valores iniciales
-    setTitle(initialTitle || "");
-    
-    // Actualizar el contenido del editor si está disponible
-    if (editor && editor.commands) {
-      editor.commands.setContent(initialDescription || '');
+    // Cuando el popup se abre por primera vez, configuramos todos los valores iniciales
+    if (!editingTitle) { // Solo si no estamos editando el título
+      setTitle(initialTitle || "");
+      setTags(initialTags || []);
+      setLastSavedState({
+        title: initialTitle || "",
+        description: initialDescription || "",
+        tags: initialTags || []
+      });
+      
+      // Actualizar el contenido del editor si está disponible
+      if (editor && editor.commands) {
+        editor.commands.setContent(initialDescription || '');
+      }
     }
     
     // Manejar navegación del botón atrás en dispositivos móviles
@@ -162,14 +191,24 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     
   }, [isOpen, imageUrl, initialTitle, initialDescription, editor, historyStateAdded]); // dependencias necesarias
 
+  // Función muy simplificada para guardar cambios - solo cuando se llama explícitamente
+  const handleSaveChanges = useCallback(() => {
+    // Guardar los cambios actuales (sin comprobaciones extra)
+    onSave(title, description, tags);
+    
+    // Actualizamos el estado de último guardado
+    setLastSavedState({
+      title,
+      description,
+      tags
+    });
+  }, [title, description, tags, onSave]);
+
   // Memoizamos handleClose para evitar recreaciones innecesarias
   const handleClose = useCallback(() => {
     // Al cerrar, no guardamos los cambios
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
-    }
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
     }
 
     // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
@@ -250,7 +289,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
           {/* Main popup container - Optimizado para móviles con animaciones mejoradas */}
           <motion.div
             ref={popupRef}
-            className="relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col md:flex-row max-w-5xl w-[95%] sm:w-[90%] max-h-[95vh] md:max-h-[90vh] overflow-hidden border border-gray-100 dark:border-gray-800"
+            className="relative z-10 max-w-5xl w-[95%] sm:w-[90%] max-h-[95vh] md:max-h-[90vh] overflow-visible flex flex-col gap-4 md:flex-row md:gap-6"
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -261,8 +300,8 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
               mass: 0.8
             }}
           >
-            {/* Content section (left side) - Ajustado para móviles */}
-            <div className="md:w-1/2 p-4 sm:p-6 md:p-8 pb-4 flex flex-col h-full overflow-auto">
+            {/* Content section (left side) - Ahora como una tarjeta independiente */}
+            <div className="md:w-1/2 p-5 sm:p-6 md:p-7 flex flex-col h-full overflow-auto bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800">
 
               <div className="flex flex-col flex-grow mt-6">
                 {/* Editable Title - Estilo similar a SectionManager */}
@@ -272,35 +311,46 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    onBlur={() => {
-                      setEditingTitle(false);
-                      if (title !== initialTitle) {
-                        onSave(title, description);
-                      }
+                    onBlur={(e) => {
+                      // Evitar que se cierre inmediatamente cuando hacemos clic para editar
+                      // Solo cerramos si dejamos de enfocarlo o presionamos Enter/Escape
+                      setTimeout(() => {
+                        if (document.activeElement !== titleInputRef.current) {
+                          setEditingTitle(false);
+                          handleSaveChanges();
+                        }
+                      }, 100);
                     }}
                     onKeyDown={(e: ReactKeyboardEvent<HTMLInputElement>) => {
                       if (e.key === 'Enter') {
                         setEditingTitle(false);
-                        if (title !== initialTitle) {
-                          onSave(title, description);
-                        }
+                        handleSaveChanges();
                       } else if (e.key === 'Escape') {
-                        setTitle(initialTitle);
+                        setTitle(lastSavedState.title); // Restaurar al valor guardado
                         setEditingTitle(false);
                       }
                     }}
                     className="text-2xl font-light bg-transparent focus:outline-none text-gray-700 dark:text-gray-300 w-full mb-6"
-                    placeholder="Título de la imagen"
+                    placeholder="Image title"
                     autoFocus
+                    spellCheck="false"
                   />
                 ) : (
                   <motion.h2 
                     className={`text-xl sm:text-2xl font-light text-gray-700 dark:text-gray-300 ${!isLiveMode ? 'cursor-pointer' : ''} group mb-4 sm:mb-6`}
-                    onClick={() => !isLiveMode && setEditingTitle(true)}
+                    onClick={() => {
+                      if (!isLiveMode) {
+                        setEditingTitle(true);
+                        // Dar tiempo al DOM para que se actualice antes de enfocar
+                        setTimeout(() => {
+                          titleInputRef.current?.focus();
+                        }, 50);
+                      }
+                    }}
                     whileHover={!isLiveMode ? { x: 2, color: '#3B82F6' } : undefined}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   >
-                    {title || (isLiveMode ? "" : "Haz clic para añadir un título")}
+                    {title || (isLiveMode ? "" : "Click to add a title")}
                     {!isLiveMode && <span className="inline-block w-0 group-hover:w-full h-[1px] bg-gray-400/30 dark:bg-gray-500/30 mt-1 transition-all duration-300"></span>}
                   </motion.h2>
                 )}
@@ -311,6 +361,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                   <EditorContent 
                     editor={editor} 
                     className={`prose prose-sm dark:prose-invert max-w-none h-full overflow-auto ${!isLiveMode ? 'focus:outline-none' : ''} text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500`}
+                    spellCheck="false"
                   />
                   {/* Verificamos si es string vacío o HTML con tags vacíos como <p></p> */}
                   {(!description || description === '<p></p>' || description === '<p>&nbsp;</p>') && !isLiveMode && (
@@ -320,35 +371,68 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3, duration: 0.3 }}
                     >
-                      Escribe aquí para añadir una descripción...
+                      Write here to add a description...
                     </motion.div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Image section (right side) - Optimizado para móviles */}
-            <div className="md:w-1/2 p-3 sm:p-4 relative flex items-center justify-center overflow-auto">
-              <div className="relative flex items-center justify-center max-h-full w-[90%] sm:w-[95%] md:w-full">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
-                  className="relative"
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={title || "Imagen seleccionada"}
-                    width={0}
-                    height={0}
-                    sizes="(max-width: 768px) 75vw, 50vw"
-                    className="rounded-xl md:rounded-2xl shadow-md max-w-full max-h-[50vh] sm:max-h-[55vh] md:max-h-[70vh] h-auto w-auto object-contain"
-                    style={{ objectFit: 'contain' }}
-                    priority
-                    unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
-                  />
-                </motion.div>
-              </div>
+            {/* Image section (right side) - Ahora como una tarjeta independiente */}
+            <div className="md:w-1/2 p-0 relative overflow-visible">
+              <motion.div
+                className="bg-white/90 dark:bg-gray-900/95 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-800 backdrop-blur-sm"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+              >
+                <div className="relative p-4 sm:p-5 flex flex-col">
+                  {/* Contenedor de imagen con altura fija */}
+                  <div className="relative flex items-center justify-center mb-3 group">
+                    <Image
+                      src={imageUrl}
+                      alt={title || "Selected image"}
+                      width={0}
+                      height={0}
+                      sizes="(max-width: 768px) 75vw, 50vw"
+                      className="rounded-lg max-w-full max-h-[50vh] sm:max-h-[55vh] md:max-h-[65vh] h-auto w-auto object-contain"
+                      style={{ objectFit: 'contain' }}
+                      priority
+                      unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
+                    />
+                    
+                    {/* Overlay de etiquetas sutilmente visible sobre la imagen */}
+                    {tags.length > 0 && (
+                      <div className="absolute inset-0 flex items-end justify-center overflow-hidden rounded-lg">
+                        <ImageTags tags={tags} isLiveMode={isLiveMode} />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Editor de etiquetas - Visible en móviles o en hover en desktop */}
+                  <AnimatePresence>
+                    {(isMobile || isHovering) && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="py-1 border-t border-gray-100 dark:border-gray-800 mt-1">
+                          <ImageTagsEditor 
+                            tags={tags} 
+                            onTagsChange={setTags} 
+                            isLiveMode={isLiveMode} 
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>

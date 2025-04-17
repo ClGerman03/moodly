@@ -45,6 +45,7 @@ export interface Section {
   id: string;
   type: SectionType;
   title: string;
+  description?: string;
   data?: {
     colors?: string[];
     palettes?: ColorPalette[];

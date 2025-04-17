@@ -216,13 +216,14 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
               imageUrl={images[selectedImageIndex]}
               initialTitle={imageMetadata.get(images[selectedImageIndex])?.title || ''}
               initialDescription={imageMetadata.get(images[selectedImageIndex])?.description || ''}
+              initialTags={imageMetadata.get(images[selectedImageIndex])?.tags || []}
               onClose={() => {
                 setIsDetailPopupOpen(false);
                 setSelectedImageIndex(null);
               }}
-              onSave={(title, description) => {
+              onSave={(title, description, tags) => {
                 if (selectedImageIndex !== null) {
-                  onImageMetadataChange(images[selectedImageIndex], { title, description });
+                  onImageMetadataChange(images[selectedImageIndex], { title, description, tags });
                 }
               }}
               isLiveMode={isLiveMode}

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Trash2, Maximize2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, Edit, Type, Keyboard, PenTool } from "lucide-react";
 import { ImageMetadata } from "./types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -105,6 +105,7 @@ const SortableImageItem: React.FC<SortableImageItemProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
+          {/* Controles superiores */}
           <div className="absolute top-2 right-2 flex gap-2">
             {/* Botón de arrastre visible en todos los dispositivos */}
             <motion.button
@@ -123,16 +124,6 @@ const SortableImageItem: React.FC<SortableImageItemProps> = ({
               <GripVertical size={16} />
             </motion.button>
             
-            {/* Botón para expandir */}
-            <motion.button
-              className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
-              whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => handleButtonClick(e, onExpand)}
-            >
-              <Maximize2 size={16} />
-            </motion.button>
-            
             {/* Botón para eliminar */}
             <motion.button
               className="p-2 bg-gray-800/80 shadow-sm text-white rounded-full"
@@ -143,6 +134,16 @@ const SortableImageItem: React.FC<SortableImageItemProps> = ({
               <Trash2 size={16} />
             </motion.button>
           </div>
+          
+          {/* Botón para editar metadata - posicionado en la parte inferior derecha con estilo amarillo */}
+          <motion.button
+            className="absolute bottom-2 right-2 p-2 bg-yellow-400 shadow-sm text-black rounded-full z-10"
+            whileHover={{ scale: 1.1, backgroundColor: 'rgba(250, 204, 21, 1)' }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => handleButtonClick(e, onExpand)}
+          >
+            <PenTool size={18} />
+          </motion.button>
         </motion.div>
       )}
     </motion.div>

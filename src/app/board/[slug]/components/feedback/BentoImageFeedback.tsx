@@ -33,6 +33,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   // Estados para el popup de comentarios
   const [isCommentPopupOpen, setIsCommentPopupOpen] = useState(false);
   const [selectedImageForComment, setSelectedImageForComment] = useState("");
+  const [selectedImageMetadata, setSelectedImageMetadata] = useState<{ title?: string; description?: string; tags?: string[] } | null>(null);
   
   // Estados para carrusel móvil
   const [currentMobileImageIndex, setCurrentMobileImageIndex] = useState(0);
@@ -40,6 +41,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   
   // Extraer datos de la sección
   const images = useMemo(() => section.data?.images || [], [section.data?.images]);
+  const imageMetadata = useMemo(() => section.data?.imageMetadata || {}, [section.data?.imageMetadata]);
   const imageLayouts = useMemo(() => {
     const layouts = section.data?.imageLayouts || {};
     return Object.entries(layouts).reduce((acc, [key, value]) => {
@@ -85,7 +87,9 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   // Handlers para feedback
   const handleImageFeedback = (imageUrl: string, type: 'positive' | 'negative' | 'neutral' | 'comment') => {
     if (type === 'comment') {
+      // Extraer y pasar también los metadatos de la imagen
       setSelectedImageForComment(imageUrl);
+      setSelectedImageMetadata(imageMetadata[imageUrl] || null);
       setIsCommentPopupOpen(true);
       if (isMobile) setTappedImage(null);
       return;
@@ -182,12 +186,16 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   return (
     <div className="relative" ref={containerRef}>
       {/* Popup para comentarios */}
-      <ImageFeedbackPopup
-        isOpen={isCommentPopupOpen}
+      <ImageFeedbackPopup 
+        isOpen={isCommentPopupOpen} 
         onClose={() => setIsCommentPopupOpen(false)}
         imageUrl={selectedImageForComment}
-        imageTitle={section.title}
-        onSubmitComment={handleSubmitComment}
+        imageTitle={selectedImageMetadata?.title || ""}
+        imageTags={selectedImageMetadata?.tags || []}
+        onSubmitComment={(comment) => {
+          handleSubmitComment(comment);
+          setIsCommentPopupOpen(false);
+        }}
       />
 
       {isMobile ? (
@@ -235,7 +243,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
               >
                 <Image
                   src={imageUrl}
-                  alt={`Imagen ${index + 1}`}
+                  alt={imageMetadata[imageUrl]?.title || `Image ${index + 1}`}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-contain"

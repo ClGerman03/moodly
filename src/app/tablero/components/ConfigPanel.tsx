@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { LucideFileText, LucideEye } from "lucide-react";
-import PdfExportPopup from "./popups/PdfExportPopup";
 import ProfilePopover from "../../../components/ui/popups/ProfilePopover";
 import { useAuth } from "@/contexts/AuthContext";
+import { LucideShare2 } from "lucide-react";
 
 interface ConfigButtonProps {
   icon: React.ReactNode;
@@ -44,12 +42,13 @@ interface ShareButtonProps {
 const ShareButton: React.FC<ShareButtonProps> = ({ onClick }) => {
   return (
     <motion.button
-      className="py-1.5 px-3 mx-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors duration-300 focus:outline-none"
+      className="w-auto px-4 py-1.5 mx-1 text-xs font-light text-white dark:text-gray-100 transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-500 focus:ring-offset-1 transform hover:scale-[1.02] opacity-90 hover:opacity-100 flex items-center justify-center"
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
     >
-      Share
+      <LucideShare2 className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />
+      <span>Share</span>
     </motion.button>
   );
 };
@@ -73,44 +72,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   // Get authentication state
   const { user } = useAuth();
   
-  // State to control PDF popup visibility
-  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
-  
-  // Handlers for PDF export popup
-  const handleOpenPdfPopup = () => {
-    setIsPdfPopupOpen(true);
-  };
-  
-  const handleClosePdfPopup = () => {
-    setIsPdfPopupOpen(false);
-  };
-  
-
-  
   return (
     <div className="flex flex-row items-center">
-      {/* Live mode button - always visible */}
-      <ConfigButton 
-        icon={<LucideEye className="w-5 h-5" strokeWidth={1} />}
-        onClick={onToggleLiveMode}
-        active={isLiveMode}
-        tooltip="View mode"
-      />
+      {/* Removed Live mode button as requested */}
       
-      {/* Other buttons - only visible when NOT in live mode */}
-      {!isLiveMode && (
-        <>
-          {/* Export to PDF button */}
-          <ConfigButton 
-            icon={<LucideFileText className="w-5 h-5" strokeWidth={1} />}
-            onClick={handleOpenPdfPopup}
-            tooltip="Export to PDF"
-          />
-          
-          {/* Share button with text */}
-          <ShareButton onClick={onShare} />
-        </>
-      )}
+      {/* Other buttons - always visible */}
+      {/* Share button with text */}
+      <ShareButton onClick={onShare} />
       
       {/* Profile button - always visible if there's a user */}
       {user && (
@@ -120,12 +88,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       )}
       
       {/* The Share Popup is now managed from the parent component */}
-      
-      {/* PDF export popup */}
-      <PdfExportPopup
-        isOpen={isPdfPopupOpen}
-        onClose={handleClosePdfPopup}
-      />
     </div>
   );
 };

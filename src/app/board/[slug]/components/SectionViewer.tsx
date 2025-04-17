@@ -36,6 +36,11 @@ const SectionViewer: React.FC<SectionViewerProps> = ({
         <h2 className="text-xl font-light text-gray-700 mb-1">
           {section.title}
         </h2>
+        {section.description && (
+          <p className="text-sm font-light text-gray-500 mb-2">
+            {section.description}
+          </p>
+        )}
       </div>
       
       {/* Contenedor para la sección */}

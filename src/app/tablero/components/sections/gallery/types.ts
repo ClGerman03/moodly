@@ -4,4 +4,5 @@
 export interface ImageMetadata {
   title?: string;
   description?: string;
+  tags?: string[];
 }

@@ -4,12 +4,14 @@ import React, { useRef, useEffect } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Send } from "lucide-react";
+import ImageTags from "./ImageTags";
 
 interface ImageFeedbackPopupProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
   imageTitle?: string;
+  imageTags?: string[];
   onSubmitComment?: (comment: string) => void;
 }
 
@@ -22,6 +24,7 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
   onClose,
   imageUrl,
   imageTitle = "",
+  imageTags = [],
   onSubmitComment,
 }) => {
   const popupRef = useRef<HTMLDivElement>(null);
@@ -106,7 +109,7 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={onClose}
-              aria-label="Cerrar"
+              aria-label="Close"
             >
               <X size={16} />
             </motion.button>
@@ -118,16 +121,25 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
               animate={{ y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Image
-                src={imageUrl}
-                alt={imageTitle || "Imagen seleccionada"}
-                width={800}
-                height={600}
-                className="rounded-xl max-h-[70vh] w-auto object-contain bg-white/5"
-                style={{ objectFit: 'contain' }}
-                priority
-                unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
-              />
+              <div className="relative">
+                <Image
+                  src={imageUrl}
+                  alt={imageTitle || "Selected image"}
+                  width={800}
+                  height={600}
+                  className="rounded-xl max-h-[70vh] w-auto object-contain bg-white/5"
+                  style={{ objectFit: 'contain' }}
+                  priority
+                  unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
+                />
+                
+                {/* Mostrar etiquetas si existen */}
+                {imageTags && imageTags.length > 0 && (
+                  <div className="absolute inset-0 flex items-end justify-center overflow-hidden rounded-xl">
+                    <ImageTags tags={imageTags} />
+                  </div>
+                )}
+              </div>
             </motion.div>
 
             {/* Rectángulo horizontal para comentarios */}
@@ -151,7 +163,7 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
                   ref={commentRef}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Añade un comentario sobre esta imagen..."
+                  placeholder="Add a comment about this image..."
                   className="w-full p-3 rounded-xl border-0 
                            bg-transparent text-gray-900 dark:text-gray-100
                            resize-none focus:outline-none focus:ring-0
@@ -172,7 +184,7 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
                     whileTap={{ scale: 0.95 }}
                     onClick={handleSubmitComment}
                     disabled={!comment.trim()}
-                    aria-label="Enviar comentario"
+                    aria-label="Send comment"
                   >
                     <Send size={14} />
                   </motion.button>

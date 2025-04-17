@@ -9,8 +9,8 @@ interface WelcomeScreenProps {
 }
 
 /**
- * Pantalla de bienvenida para la experiencia de feedback
- * Muestra una introducción y solicita el nombre del cliente antes de comenzar
+ * Welcome screen for the feedback experience
+ * Shows an introduction and requests the client's name before starting
  */
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => {
   const [clientName, setClientName] = useState("");
@@ -22,7 +22,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
     if (clientName.trim()) {
       onStart(clientName.trim());
     } else {
-      setError("Por favor, introduce tu nombre para continuar");
+      setError("Please enter your name to continue");
     }
   };
   
@@ -41,7 +41,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <h1 className="text-2xl font-light text-gray-700 dark:text-gray-300 mb-3">
-            Bienvenido al tablero
+            Welcome to the board
           </h1>
           
           <h2 className="text-3xl font-light text-gray-800 dark:text-gray-100 mb-6">
@@ -49,14 +49,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
           </h2>
           
           <p className="text-gray-500 dark:text-gray-400 font-light mb-10 max-w-sm">
-            Has sido invitado a revisar este tablero y proporcionar tu feedback. 
-            Te mostraremos diferentes secciones para que puedas compartir tu opinión.
+            You've been invited to review this board and provide your feedback.
+            We'll show you different sections where you can share your opinion.
           </p>
           
           <form onSubmit={handleSubmit} className="w-full space-y-6">
             <div className="w-full">
               <label htmlFor="client-name" className="block text-sm text-gray-500 dark:text-gray-400 text-center mb-2 font-light">
-                ¿Cómo te llamas?
+                What's your name?
               </label>
               <input
                 id="client-name"
@@ -66,7 +66,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
                   setClientName(e.target.value);
                   if (error) setError("");
                 }}
-                placeholder="Escribe tu nombre"
+                placeholder="Type your name"
                 className="w-full py-2 text-xl text-center text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600 bg-transparent outline-none focus:outline-none border-b border-gray-200 dark:border-gray-700 transition-all duration-300"
                 autoFocus
               />
@@ -86,7 +86,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
               type="submit"
               className="w-auto px-6 py-2 mx-auto mt-4 text-sm font-light text-white dark:text-gray-100 transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500 focus:ring-offset-2 transform hover:scale-[1.02] opacity-90 hover:opacity-100 flex items-center justify-center"
             >
-              Comenzar revisión
+              Start review
             </button>
           </form>
         </motion.div>

@@ -3,6 +3,7 @@
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageGallerySection from './sections/ImageGallerySection';
+import SectionConnector from './SectionConnector';
 
 // Define the ImageLayout type locally instead of importing from a non-existent module
 type ImageLayout = "square" | "vertical" | "horizontal";
@@ -39,17 +40,18 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
     }
   }, [initialSections]);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingDescriptionId, setEditingDescriptionId] = useState<string | null>(null);
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
   
   // Función eliminada ya que no se usa después de la actualización del AddSection
   
   // Manejar la adición de una nueva sección
   const handleAddSection = (type: SectionType) => {
-    // Asignar titulo predeterminado segun el tipo
-    const defaultTitle = type === "imageGallery" ? "Galería de Imágenes" :
+    // Asignar titulo predeterminado segun el tipo (todos en inglés)
+    const defaultTitle = type === "imageGallery" ? "Image Gallery" :
                      type === "palette" ? "Color Palette" : 
-                     type === "typography" ? "Tipografía" : 
-                     type === "text" ? "Texto" : "Enlaces";
+                     type === "typography" ? "Typography" : 
+                     type === "text" ? "Text" : "Links";
     
     // Preparar datos iniciales según el tipo de sección
     let initialData: Record<string, unknown> = {};
@@ -71,10 +73,8 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
     
     setSections([...sections, newSection]);
     
-    // Activar inmediatamente la edicion del nuevo titulo
-    setTimeout(() => {
-      setEditingSectionId(newSection.id);
-    }, 100);
+    // Eliminamos la activación automática de edición del título para mejor experiencia
+    // El usuario puede hacer clic en el título cuando desee editarlo
   };
   
   // Eliminar una sección
@@ -86,6 +86,14 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
   const updateSectionTitle = (id: string, newTitle: string) => {
     const updatedSections = sections.map(section => 
       section.id === id ? { ...section, title: newTitle } : section
+    );
+    setSections(updatedSections);
+  };
+
+  // Actualizar la descripción de una sección
+  const updateSectionDescription = (id: string, newDescription: string) => {
+    const updatedSections = sections.map(section => 
+      section.id === id ? { ...section, description: newDescription } : section
     );
     setSections(updatedSections);
   };
@@ -219,36 +227,71 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
     });
   };
 
-  // Renderizar el título de una sección (editable o no)
+  // Renderizar el título y descripción de una sección (editable o no)
   const renderSectionTitle = (section: Section) => {
-    // No permitir edición en modo live
-    const isEditing = !isLiveMode && editingSectionId === section.id;
+    const isEditingTitle = editingSectionId === section.id;
+    const isEditingDescription = editingDescriptionId === section.id;
+    const isHovered = hoveredSectionId === section.id;
     
     return (
-      <div className="flex justify-between items-center mb-4">
-        {isEditing ? (
-          <input
-            type="text"
-            value={section.title}
-            onChange={(e) => updateSectionTitle(section.id, e.target.value)}
-            onBlur={() => setEditingSectionId(null)}
-            onKeyDown={(e) => e.key === 'Enter' && setEditingSectionId(null)}
-            className="text-xl font-light bg-transparent focus:outline-none text-gray-700 dark:text-gray-300 w-full max-w-sm"
-            autoFocus
-          />
-        ) : (
-          <motion.h2 
-            className={`text-xl font-light text-gray-700 dark:text-gray-300 ${!isLiveMode ? 'cursor-pointer' : ''} group max-w-sm`}
-            onClick={() => !isLiveMode && setEditingSectionId(section.id)}
-            whileHover={!isLiveMode ? { x: 2 } : undefined}
-            title={isLiveMode ? section.title : "Haz click para editar"}
-          >
-            {section.title}
-            {!isLiveMode && <span className="inline-block w-0 group-hover:w-full h-[1px] bg-gray-400/30 dark:bg-gray-500/30 mt-1 transition-all duration-300"></span>}
-          </motion.h2>
-        )}
-        
-        {hoveredSectionId === section.id && !isLiveMode && (
+      <div className="mb-3 flex justify-between items-start">
+        <div className="flex-grow">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              className="w-full p-0 pb-1 text-xl font-light text-gray-800 bg-transparent border-0 border-b border-gray-200 focus:border-gray-500 outline-none focus:outline-none focus:ring-0 transition-all duration-200"
+              value={section.title}
+              onChange={(e) => updateSectionTitle(section.id, e.target.value)}
+              onBlur={() => setEditingSectionId(null)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setEditingSectionId(null);
+                }
+              }}
+              autoFocus
+              spellCheck="false"
+            />
+          ) : (
+            <h2
+              className="text-xl font-light text-gray-700 cursor-pointer hover:text-gray-900 transition-colors duration-200 group relative"
+              onClick={() => !isLiveMode && setEditingSectionId(section.id)}
+            >
+              {section.title}
+              {!isLiveMode && <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-400/30 group-hover:w-full transition-all duration-300"></span>}
+            </h2>
+          )}
+          
+          {/* Description Field */}
+          <div className="mt-1">
+            {isEditingDescription ? (
+              <input
+                type="text"
+                className="w-full p-0 pb-0.5 text-sm font-light text-gray-600 bg-transparent border-0 border-b border-gray-200 focus:border-gray-500 outline-none focus:outline-none focus:ring-0 transition-all duration-200"
+                value={section.description || ''}
+                placeholder="Add a description"
+                onChange={(e) => updateSectionDescription(section.id, e.target.value)}
+                onBlur={() => setEditingDescriptionId(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setEditingDescriptionId(null);
+                  }
+                }}
+                autoFocus
+                spellCheck="false"
+              />
+            ) : (
+              <p
+                className="text-sm font-light text-gray-500 cursor-pointer hover:text-gray-700 transition-colors duration-200 group relative inline-block"
+                onClick={() => !isLiveMode && setEditingDescriptionId(section.id)}
+              >
+                {section.description || 
+                  <span className="italic text-gray-400">Add a description</span>}
+                {!isLiveMode && <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-400/30 group-hover:w-full transition-all duration-300"></span>}
+              </p>
+            )}
+          </div>
+        </div>
+        {isHovered && !isLiveMode && (
           <motion.button
             onClick={() => handleRemoveSection(section.id)}
             className="ml-2 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
@@ -393,10 +436,34 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
     }
   }));
   
+  // Esta función renderiza secciones con conectores entre ellas
+  const renderSectionsWithConnectors = () => {
+    if (sections.length === 0) return null;
+    
+    const result: React.ReactNode[] = [];
+    
+    sections.forEach((section, index) => {
+      // Add section
+      result.push(renderSection(section));
+      
+      // Add connector after each section except the last one
+      if (index < sections.length - 1) {
+        result.push(
+          <SectionConnector 
+            key={`connector-${section.id}`}
+            index={index} 
+          />
+        );
+      }
+    });
+    
+    return result;
+  };
+
   return (
     <div className="w-full">
       <AnimatePresence>
-        {sections.map(renderSection)}
+        {renderSectionsWithConnectors()}
       </AnimatePresence>
       {!isLiveMode && (
         <AddSection 

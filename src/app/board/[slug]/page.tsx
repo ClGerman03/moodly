@@ -6,11 +6,12 @@ import { Section } from "@/app/tablero/types";
 
 // Componentes de la experiencia de feedback
 import WelcomeScreen from "./components/WelcomeScreen";
+import FarewellScreen from "./components/FarewellScreen";
 import NavigationControls from "./components/NavigationControls";
 import SectionViewer from "./components/SectionViewer";
 
 // Estados posibles de la experiencia de feedback
-type ViewState = "welcome" | "sections" | "summary";
+type ViewState = "welcome" | "sections" | "farewell" | "summary";
 
 export default function PublicBoard() {
   const { slug } = useParams();
@@ -84,9 +85,8 @@ export default function PublicBoard() {
     if (boardData?.sections && currentSectionIndex < boardData.sections.length - 1) {
       setCurrentSectionIndex(currentSectionIndex + 1);
     } else {
-      // Por ahora, simplemente mostramos un mensaje de finalización
-      // En el futuro, esto cambiará a viewState="summary"
-      alert("¡Gracias por tu feedback!");
+      // Mostrar la pantalla de despedida cuando se completan todas las secciones
+      setViewState("farewell");
     }
     saveFeedbackProgress();
   };
@@ -123,6 +123,14 @@ export default function PublicBoard() {
     setClientName(name);
     setViewState("sections");
   };
+  
+  // Manejar la finalización de la experiencia (desde FarewellScreen)
+  const handleFinish = () => {
+    // Only show acknowledgment that feedback is complete
+    // No redirection needed as this is for end users providing feedback
+    console.log("Feedback process completed");
+    // Optional: Any final actions like saving to server can be added here
+  };
 
   if (loading) {
     return (
@@ -157,7 +165,7 @@ export default function PublicBoard() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {viewState === "welcome" && (
         <WelcomeScreen 
           boardName={boardData.name}
@@ -171,7 +179,7 @@ export default function PublicBoard() {
           
           <div className="pt-6 pb-16"> {/* Reducimos el padding inferior */}
             <header className="text-center mb-6">
-              <h1 className="text-2xl font-light text-gray-800">
+              <h1 className="text-2xl font-light text-gray-800 dark:text-gray-200">
                 {boardData.name}
               </h1>
             </header>
@@ -189,6 +197,14 @@ export default function PublicBoard() {
             isLast={currentSectionIndex === boardData.sections.length - 1}
           />
         </>
+      )}
+      
+      {viewState === "farewell" && (
+        <FarewellScreen 
+          boardName={boardData.name}
+          clientName={clientName}
+          onFinish={handleFinish}
+        />
       )}
     </div>
   );
