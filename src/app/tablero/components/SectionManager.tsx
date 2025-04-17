@@ -21,15 +21,17 @@ import { prepareForStorage, prepareForDisplay } from '@/utils/serialization/sect
 
 interface SectionManagerProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
-  isLiveMode?: boolean;
   initialSections?: Section[];
 }
 
 const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManagerProps>((
-  { fileInputRef, isLiveMode = false, initialSections = [] }: SectionManagerProps,
+  { fileInputRef, initialSections = [] }: SectionManagerProps,
   ref
 ) => {
   const [sections, setSections] = useState<Section[]>([]);
+  
+  // Valor constante para reemplazar la prop isLiveMode eliminada
+  const isLiveMode = false; // El modo Live ha sido desactivado permanentemente
   
   // Procesar las secciones iniciales cuando se cargan
   useEffect(() => {

@@ -6,15 +6,13 @@ import { Tag } from "lucide-react";
 
 interface ImageTagsProps {
   tags: string[];
-  isLiveMode?: boolean;
 }
 
 /**
  * Componente que muestra etiquetas sutilmente encima de la imagen
  */
 const ImageTags: React.FC<ImageTagsProps> = ({
-  tags = [],
-  isLiveMode = false
+  tags = []
 }) => {
   if (tags.length === 0) return null;
 

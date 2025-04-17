@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ThumbsUp, ThumbsDown, ExternalLink } from "lucide-react";
 import { Section, PreviewSize } from "@/app/tablero/types";
-import FontDetailPopup from "./FontDetailPopup";
+import FontDetailPopup from "../popups/FontDetailPopup";
 
 interface FontOption {
   id: string;

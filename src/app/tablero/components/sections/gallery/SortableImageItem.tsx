@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Trash2, GripVertical, Edit, Type, Keyboard, PenTool } from "lucide-react";
+import { Trash2, GripVertical, PenTool } from "lucide-react";
 import { ImageMetadata } from "./types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";

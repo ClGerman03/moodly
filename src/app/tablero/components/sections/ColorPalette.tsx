@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, PanInfo, useTransform } from "framer-motion";
 import { useDeviceDetection } from "../hooks/useDeviceDetection";
 import { cn } from "@/lib/utils";
@@ -51,10 +51,14 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
   
   // Update a color in the active palette
   const updateColor = (index: number, newColor: string) => {
-    const updatedPalettes = [...palettes];
+    // Crear una copia profunda de las paletas
+    const updatedPalettes = JSON.parse(JSON.stringify(palettes));
     updatedPalettes[activePaletteIndex].colors[index] = newColor;
     setPalettes(updatedPalettes);
-    onChange?.(updatedPalettes);
+    // Llamar a onChange para notificar al componente padre
+    if (onChange) {
+      onChange(updatedPalettes);
+    }
   };
   
   // Add a new color to the active palette
@@ -128,7 +132,7 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
   const dragX = useMotionValue(0);
   const dragXInput = [-200, 0, 200];
   const dragXOutput = [1, 0, -1];
-  const dragDirection = useTransform(dragX, dragXInput, dragXOutput);
+  useTransform(dragX, dragXInput, dragXOutput); // Usado indirectamente en el sistema de drag
   
   // Track if user is on mobile
   const isMobile = useDeviceDetection();
@@ -166,7 +170,27 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
     <div className="w-full bg-white dark:bg-gray-900 rounded-lg p-6">
       {/* Section header with title */}
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">Color palette</h3>
+        {/* Título editable movido a la parte superior */}
+        <div className="flex items-center">
+          <motion.button 
+            className="flex items-center text-gray-700 dark:text-gray-300 group"
+            onClick={() => !isLiveMode && setIsEditingName(true)}
+            whileHover={{ scale: 1.01 }}
+            disabled={isLiveMode}
+            aria-label="Edit palette name"
+          >
+            <span className="text-base font-medium">{activePalette.name}</span>
+            {!isLiveMode && (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 ml-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            )}
+          </motion.button>
+          
+          <div className="text-xs text-gray-500 dark:text-gray-400 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full ml-2">
+            {activePalette.colors.length} colors
+          </div>
+        </div>
         
         {!isLiveMode && palettes.length > 1 && (
           <div className="hidden md:flex items-center gap-2 text-gray-500 dark:text-gray-400">
@@ -288,12 +312,16 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
                           value={temporaryColor || color}
                           onChange={(e) => {
                             setTemporaryColor(e.target.value);
+                            // Actualizar el color inmediatamente cuando cambia
+                            updateColor(index, e.target.value);
                           }}
                           onBlur={() => {
+                            // Al perder el foco, asegurarse de que se ha actualizado el color
                             if (temporaryColor) {
                               updateColor(index, temporaryColor);
-                              setTemporaryColor(null);
                             }
+                            // Limpiar el estado temporal
+                            setTemporaryColor(null);
                             setEditingColorIndex(null);
                             
                             setIsColorPickerLocked(true);
@@ -393,29 +421,8 @@ const ColorPaletteComponent = ({ initialPalettes, onChange, isLiveMode = false }
         </AnimatePresence>
       </div>
       
-      {/* Palette name and navigation dots - moved below the palette */}
-      <div className="flex items-center justify-between mt-3 mb-4">
-        {/* Palette name with edit button */}
-        <div className="flex items-center">
-          <motion.button 
-            className="flex items-center text-gray-700 dark:text-gray-300 group"
-            onClick={() => !isLiveMode && setIsEditingName(true)}
-            whileHover={{ scale: 1.01 }}
-            disabled={isLiveMode}
-            aria-label="Edit palette name"
-          >
-            <span className="text-sm font-medium">{activePalette.name}</span>
-            {!isLiveMode && (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 ml-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            )}
-          </motion.button>
-          
-          <div className="text-xs text-gray-500 dark:text-gray-400 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full ml-2">
-            {activePalette.colors.length} colors
-          </div>
-        </div>
+      {/* Navigation dots - moved below the palette */}
+      <div className="flex items-center justify-end mt-3 mb-4">
         
         {/* Palette navigation dots */}
         {palettes.length > 1 && (

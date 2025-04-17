@@ -11,7 +11,6 @@ import { Section } from './types';
 export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
   const [isNameSet, setIsNameSet] = useState<boolean>(false);
-  const [isLiveMode, setIsLiveMode] = useState<boolean>(false);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
   const [showNameForm, setShowNameForm] = useState<boolean>(true);
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
@@ -178,8 +177,6 @@ export default function Tablero() {
                 {boardName}
               </h1>
               <ConfigPanel 
-                isLiveMode={isLiveMode}
-                onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
                 onShare={() => setIsSharePopupOpen(true)}
               />
             </div>
@@ -187,7 +184,6 @@ export default function Tablero() {
             {/* Gestor de secciones */}
             <SectionManager 
               fileInputRef={fileInputRef}
-              isLiveMode={isLiveMode}
               ref={sectionManagerRef}
             />
           </motion.div>

@@ -95,7 +95,14 @@ const sectionAdapters: Record<SectionType, SectionAdapter> = {
       const processedMetadata = data.imageMetadata ? 
         Object.fromEntries(
           Object.entries(data.imageMetadata).map(([key, value]) => {
-            const metadata = value as any;
+            // Definimos una interfaz para el tipo de metadata en lugar de usar 'any'
+            interface ImageMetadata {
+              title?: string;
+              description?: string;
+              tags?: string[];
+            }
+            
+            const metadata = value as ImageMetadata;
             return [key, {
               title: metadata.title || '',
               description: metadata.description || '',

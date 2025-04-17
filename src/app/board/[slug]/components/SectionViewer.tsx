@@ -4,11 +4,11 @@ import { motion } from "framer-motion";
 import { Section } from "@/app/tablero/types";
 
 // Importar componentes específicos de feedback
-import BentoImageFeedback from "./feedback/BentoImageFeedback";
-import ColorPaletteFeedback from "./feedback/ColorPaletteFeedback";
-import LinkSectionFeedback from "./feedback/LinkSectionFeedback";
-import TypographyFeedback from "./feedback/TypographyFeedback";
-import TextSectionFeedback from "./feedback/TextSectionFeedback";
+import BentoImageFeedback from "./feedback/sections/BentoImageFeedback";
+import ColorPaletteFeedback from "./feedback/sections/ColorPaletteFeedback";
+import LinkSectionFeedback from "./feedback/sections/LinkSectionFeedback";
+import TypographyFeedback from "./feedback/sections/TypographyFeedback";
+import TextSectionFeedback from "./feedback/sections/TextSectionFeedback";
 
 interface SectionViewerProps {
   section: Section;

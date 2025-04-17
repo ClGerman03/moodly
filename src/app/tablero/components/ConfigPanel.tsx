@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import ProfilePopover from "../../../components/ui/popups/ProfilePopover";
 import { useAuth } from "@/contexts/AuthContext";
-import { LucideShare2 } from "lucide-react";
+import { LucideUpload, LucideLayoutDashboard } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ConfigButtonProps {
   icon: React.ReactNode;
@@ -47,8 +48,8 @@ const ShareButton: React.FC<ShareButtonProps> = ({ onClick }) => {
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
     >
-      <LucideShare2 className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />
-      <span>Share</span>
+      <LucideUpload className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />
+      <span>Publish</span>
     </motion.button>
   );
 };
@@ -56,8 +57,6 @@ const ShareButton: React.FC<ShareButtonProps> = ({ onClick }) => {
 
 
 interface ConfigPanelProps {
-  isLiveMode?: boolean;
-  onToggleLiveMode?: () => void;
   onShare?: () => void;
 }
 
@@ -65,12 +64,15 @@ interface ConfigPanelProps {
  * Main configuration panel that displays available actions
  */
 const ConfigPanel: React.FC<ConfigPanelProps> = ({ 
-  isLiveMode = false, 
-  onToggleLiveMode = () => {},
   onShare = () => {}
 }) => {
   // Get authentication state
   const { user } = useAuth();
+  const router = useRouter();
+  
+  const handleDashboardClick = () => {
+    router.push('/dashboard');
+  };
   
   return (
     <div className="flex flex-row items-center">
@@ -79,6 +81,15 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* Other buttons - always visible */}
       {/* Share button with text */}
       <ShareButton onClick={onShare} />
+      
+      {/* Dashboard button - only visible if there's a user */}
+      {user && (
+        <ConfigButton 
+          icon={<LucideLayoutDashboard className="w-4 h-4" />}
+          onClick={handleDashboardClick}
+          tooltip="Dashboard"
+        />
+      )}
       
       {/* Profile button - always visible if there's a user */}
       {user && (

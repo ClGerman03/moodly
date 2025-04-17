@@ -29,21 +29,25 @@ export function useMediaQuery(query: string): boolean {
       // Compatibilidad con navegadores más antiguos
       const listener = () => updateMatches();
       
-      // Añadir el listener utilizando addEventListener si está disponible, o con listener si no
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener("change", listener);
-      } else {
-        // @ts-ignore - Para compatibilidad con navegadores antiguos
-        mediaQuery.addListener(listener);
+      // Añadir el listener utilizando la API disponible
+      // Definición de tipo para permitir ambas APIs sin errores de compilación
+      const mql = mediaQuery as MediaQueryList & {
+        addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+        removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+      };
+      
+      if (mql.addEventListener) {
+        mql.addEventListener("change", listener);
+      } else if (mql.addListener) {
+        mql.addListener(listener);
       }
 
       // Limpiar al desmontar
       return () => {
-        if (mediaQuery.removeEventListener) {
-          mediaQuery.removeEventListener("change", listener);
-        } else {
-          // @ts-ignore - Para compatibilidad con navegadores antiguos
-          mediaQuery.removeListener(listener);
+        if (mql.removeEventListener) {
+          mql.removeEventListener("change", listener);
+        } else if (mql.removeListener) {
+          mql.removeListener(listener);
         }
       };
     }

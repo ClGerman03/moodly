@@ -45,7 +45,7 @@ const FarewellScreen: React.FC<FarewellScreenProps> = ({
           </p>
           
           <p className="text-gray-500 dark:text-gray-400 font-light mb-10 max-w-sm">
-            We appreciate the time you've taken to share your thoughts with us.
+            We appreciate the time you&apos;ve taken to share your thoughts with us.
           </p>
           
           <button

@@ -49,14 +49,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ boardName, onStart }) => 
           </h2>
           
           <p className="text-gray-500 dark:text-gray-400 font-light mb-10 max-w-sm">
-            You've been invited to review this board and provide your feedback.
-            We'll show you different sections where you can share your opinion.
+            You&apos;ve been invited to review this board and provide your feedback.
+            We&apos;ll show you different sections where you can share your opinion.
           </p>
           
           <form onSubmit={handleSubmit} className="w-full space-y-6">
             <div className="w-full">
               <label htmlFor="client-name" className="block text-sm text-gray-500 dark:text-gray-400 text-center mb-2 font-light">
-                What's your name?
+                What&apos;s your name?
               </label>
               <input
                 id="client-name"

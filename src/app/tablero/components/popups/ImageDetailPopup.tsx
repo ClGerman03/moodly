@@ -94,12 +94,8 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   onSave,
   isLiveMode = false,
 }) => {
-  // Guardamos los valores iniciales para referencia y comparación
-  const [initialValues] = useState({
-    title: initialTitle || "",
-    description: initialDescription || "",
-    tags: initialTags || [],
-  });
+  // Los valores iniciales son directamente de las props
+  // Mantenemos las referencias separadas para simplicidad
   
   // Estados simplificados sin isSaving
   const [title, setTitle] = useState(initialTitle);
@@ -189,7 +185,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     // Limpiar el temporizador cuando se desmonte
     return () => clearTimeout(focusTimer);
     
-  }, [isOpen, imageUrl, initialTitle, initialDescription, editor, historyStateAdded]); // dependencias necesarias
+  }, [isOpen, imageUrl, initialTitle, initialDescription, editor, historyStateAdded, editingTitle, initialTags]); // dependencias necesarias
 
   // Función muy simplificada para guardar cambios - solo cuando se llama explícitamente
   const handleSaveChanges = useCallback(() => {
@@ -311,7 +307,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    onBlur={(e) => {
+                    onBlur={() => {
                       // Evitar que se cierre inmediatamente cuando hacemos clic para editar
                       // Solo cerramos si dejamos de enfocarlo o presionamos Enter/Escape
                       setTimeout(() => {
@@ -406,7 +402,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                     {/* Overlay de etiquetas sutilmente visible sobre la imagen */}
                     {tags.length > 0 && (
                       <div className="absolute inset-0 flex items-end justify-center overflow-hidden rounded-lg">
-                        <ImageTags tags={tags} isLiveMode={isLiveMode} />
+                        <ImageTags tags={tags} />
                       </div>
                     )}
                   </div>
