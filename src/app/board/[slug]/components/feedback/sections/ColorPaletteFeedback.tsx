@@ -180,6 +180,9 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
     // Si es comentario, mostrar el panel de comentarios
     if (type === 'comment') {
       setIsCommentMode(true);
+      // Ya no necesitamos establecer selectedItemForComment manualmente
+      // El hook useSectionFeedback lo manejará cuando pasemos el tipo 'comment'
+      handleItemFeedback(paletteId, type as any);
       return;
     }
     
