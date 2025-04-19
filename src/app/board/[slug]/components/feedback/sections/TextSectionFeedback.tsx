@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare } from "lucide-react";
 import { Section, TextContent, TextSize } from "@/app/tablero/types";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import FeedbackButtons from "../shared/FeedbackButtons";
@@ -77,18 +76,18 @@ const TextSectionFeedback: React.FC<TextSectionFeedbackProps> = ({
   };
 
   // Handler for text feedback
-  const handleTextFeedback = (type: string) => {
+  const handleTextFeedback = (type: 'positive' | 'negative' | 'comment') => {
     // We use 'text' as the item ID since there's only one text component
     const textId = 'text';
     
     if (type === 'comment') {
       setIsCommentMode(true);
-      handleItemFeedback(textId, type as any);
+      handleItemFeedback(textId, type);
       return;
     }
     
     // Use our hook to manage feedback
-    handleItemFeedback(textId, type as any);
+    handleItemFeedback(textId, type);
   };
   
   // Handler for submitting text comments

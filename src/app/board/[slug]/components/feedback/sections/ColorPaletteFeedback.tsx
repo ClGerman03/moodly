@@ -174,7 +174,7 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
   };
   
   // Handler específico para feedback de paletas
-  const handlePaletteFeedback = (type: string) => {
+  const handlePaletteFeedback = (type: 'positive' | 'negative' | 'comment') => {
     const paletteId = activePalette.id;
     
     // Si es comentario, mostrar el panel de comentarios
@@ -182,12 +182,12 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
       setIsCommentMode(true);
       // Ya no necesitamos establecer selectedItemForComment manualmente
       // El hook useSectionFeedback lo manejará cuando pasemos el tipo 'comment'
-      handleItemFeedback(paletteId, type as any);
+      handleItemFeedback(paletteId, 'comment');
       return;
     }
     
     // Usar nuestro hook para gestionar el feedback
-    handleItemFeedback(paletteId, type as any);
+    handleItemFeedback(paletteId, type);
   };
   
   // Handler específico para enviar comentarios de paletas

@@ -42,91 +42,6 @@ export function useSectionFeedback({
   const [currentComment, setCurrentComment] = useState("");
 
   /**
-   * Maneja el feedback (reacciones) para un elemento específico
-   * @param itemId - ID del elemento (url de imagen, id de paleta, etc.)
-   * @param type - Tipo de feedback (positivo, negativo, comentario)
-   */
-  const handleItemFeedback = useCallback((itemId: string, type: FeedbackType) => {
-    if (type === 'comment') {
-      // Si es un comentario, seleccionar el elemento para mostrar formulario
-      setSelectedItemForComment(itemId);
-      return;
-    }
-    
-    // Para reacciones (positivo/negativo), actualizar el estado
-    setFeedbackItems(prev => {
-      // Obtener estado actual o crear uno nuevo
-      const currentItem = prev[itemId] || { 
-        itemId, 
-        comments: [] 
-      };
-      
-      // Si el tipo es igual al actual, lo quitamos (toggle)
-      const newItem = {
-        ...currentItem,
-        reaction: currentItem.reaction === type ? undefined : type
-      };
-      
-      const newFeedbackItems = {
-        ...prev,
-        [itemId]: newItem
-      };
-      
-      // Notificar cambios
-      notifyFeedbackChange(newFeedbackItems);
-      
-      return newFeedbackItems;
-    });
-  }, [onFeedbackChange, sectionId]);
-
-  /**
-   * Maneja el envío de un comentario para el elemento seleccionado
-   * @param comment - Texto del comentario
-   */
-  const handleSubmitComment = useCallback((comment: string = currentComment) => {
-    if (!selectedItemForComment || !comment.trim()) return;
-    
-    // Crear nuevo comentario con timestamp
-    const newComment = {
-      text: comment.trim(),
-      timestamp: new Date().toISOString()
-    };
-    
-    // Actualizar el estado del feedback
-    setFeedbackItems(prev => {
-      // Obtener estado actual o crear uno nuevo
-      const currentItem = prev[selectedItemForComment] || { 
-        itemId: selectedItemForComment, 
-        comments: [] 
-      };
-      
-      // Verificar que no exista un comentario igual
-      const commentExists = currentItem.comments.some(c => c.text === comment.trim());
-      if (commentExists) return prev;
-      
-      // Añadir el nuevo comentario
-      const newItem = {
-        ...currentItem,
-        comments: [...currentItem.comments, newComment]
-      };
-      
-      const newFeedbackItems = {
-        ...prev,
-        [selectedItemForComment]: newItem
-      };
-      
-      // Notificar cambios
-      notifyFeedbackChange(newFeedbackItems);
-      
-      return newFeedbackItems;
-    });
-    
-    // Limpiar estados
-    setCurrentComment("");
-    setSelectedItemForComment(null);
-  }, [currentComment, selectedItemForComment, onFeedbackChange, sectionId]);
-
-  /**
    * Notifica al componente padre sobre cambios en el feedback
    */
   const notifyFeedbackChange = useCallback((
@@ -185,6 +100,91 @@ export function useSectionFeedback({
       }))
     });
   }, [onFeedbackChange, sectionId]);
+
+  /**
+   * Maneja el feedback (reacciones) para un elemento específico
+   * @param itemId - ID del elemento (url de imagen, id de paleta, etc.)
+   * @param type - Tipo de feedback (positivo, negativo, comentario)
+   */
+  const handleItemFeedback = useCallback((itemId: string, type: FeedbackType) => {
+    if (type === 'comment') {
+      // Si es un comentario, seleccionar el elemento para mostrar formulario
+      setSelectedItemForComment(itemId);
+      return;
+    }
+    
+    // Para reacciones (positivo/negativo), actualizar el estado
+    setFeedbackItems(prev => {
+      // Obtener estado actual o crear uno nuevo
+      const currentItem = prev[itemId] || { 
+        itemId, 
+        comments: [] 
+      };
+      
+      // Si el tipo es igual al actual, lo quitamos (toggle)
+      const newItem = {
+        ...currentItem,
+        reaction: currentItem.reaction === type ? undefined : type
+      };
+      
+      const newFeedbackItems = {
+        ...prev,
+        [itemId]: newItem
+      };
+      
+      // Notificar cambios
+      notifyFeedbackChange(newFeedbackItems);
+      
+      return newFeedbackItems;
+    });
+  }, [notifyFeedbackChange]);
+
+  /**
+   * Maneja el envío de un comentario para el elemento seleccionado
+   * @param comment - Texto del comentario
+   */
+  const handleSubmitComment = useCallback((comment: string = currentComment) => {
+    if (!selectedItemForComment || !comment.trim()) return;
+    
+    // Crear nuevo comentario con timestamp
+    const newComment = {
+      text: comment.trim(),
+      timestamp: new Date().toISOString()
+    };
+    
+    // Actualizar el estado del feedback
+    setFeedbackItems(prev => {
+      // Obtener estado actual o crear uno nuevo
+      const currentItem = prev[selectedItemForComment] || { 
+        itemId: selectedItemForComment, 
+        comments: [] 
+      };
+      
+      // Verificar que no exista un comentario igual
+      const commentExists = currentItem.comments.some(c => c.text === comment.trim());
+      if (commentExists) return prev;
+      
+      // Añadir el nuevo comentario
+      const newItem = {
+        ...currentItem,
+        comments: [...currentItem.comments, newComment]
+      };
+      
+      const newFeedbackItems = {
+        ...prev,
+        [selectedItemForComment]: newItem
+      };
+      
+      // Notificar cambios
+      notifyFeedbackChange(newFeedbackItems);
+      
+      return newFeedbackItems;
+    });
+    
+    // Limpiar estados
+    setCurrentComment("");
+    setSelectedItemForComment(null);
+  }, [currentComment, selectedItemForComment, notifyFeedbackChange]);
 
   /**
    * Limpia el comentario y cierra el modo de comentario

@@ -4,6 +4,7 @@ import React from 'react';
 import { ThumbsUp, ThumbsDown, PenTool } from "lucide-react";
 import { Section } from "@/app/tablero/types";
 import { NormalizedFeedback } from '../adapters/feedbackNormalizer';
+import Image from 'next/image';
 
 interface ImageGallerySummaryProps {
   section: Section;
@@ -14,7 +15,6 @@ interface ImageGallerySummaryProps {
  * Componente especializado para mostrar el resumen de feedback de galería de imágenes
  */
 const ImageGallerySummary: React.FC<ImageGallerySummaryProps> = ({
-  section,
   normalizedFeedback
 }) => {
   // Obtener todas las imágenes que tienen feedback
@@ -47,11 +47,13 @@ const ImageGallerySummary: React.FC<ImageGallerySummaryProps> = ({
     <div className="space-y-4">
       {allFeedbackImages.map((imageUrl, index) => (
         <div key={index} className="flex items-start border-b border-gray-100 dark:border-gray-700 pb-3 last:border-0">
-          <div className="w-20 h-16 bg-gray-100 dark:bg-gray-700 rounded-md mr-3 overflow-hidden relative flex-shrink-0">
-            <img 
-              src={imageUrl} 
-              alt="Imagen con feedback" 
-              className="w-full h-full object-cover"
+          <div className="relative h-32 w-32 mx-auto mb-2 overflow-hidden rounded-md">
+            <Image 
+              src={imageUrl}
+              alt="Gallery image"
+              fill
+              sizes="128px"
+              className="object-cover" 
             />
           </div>
           <div className="flex-grow">
@@ -89,7 +91,7 @@ const ImageGallerySummary: React.FC<ImageGallerySummaryProps> = ({
                       <PenTool size={12} className="mr-1" />
                       <span className="text-xs">Comentario{commentsByImage[imageUrl].length > 1 ? ` ${idx + 1}` : ''}:</span>
                     </div>
-                    "{comment}"
+                    &ldquo;{comment}&rdquo;
                   </div>
                 ))}
               </div>

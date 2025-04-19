@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { motion } from "framer-motion";
 import TextArea from "../popups/imagefeedback/shared/CommentForm";
 
 interface CommentSectionProps {
   /**
    * ID del elemento al que se está agregando comentarios
+   * @deprecated No se utiliza actualmente pero se mantiene por compatibilidad
    */
-  itemId: string;
+  itemId?: string;
   
   /**
    * Comentario actual en el editor
@@ -50,6 +51,8 @@ interface CommentSectionProps {
  * Se puede usar en cualquier tipo de sección de feedback
  */
 const CommentSection: React.FC<CommentSectionProps> = ({
+  // itemId se incluye pero no se utiliza
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   itemId,
   currentComment,
   setCurrentComment,

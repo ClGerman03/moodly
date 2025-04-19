@@ -2,12 +2,11 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { ArrowLeft, ArrowRight, ExternalLink, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Section, PreviewSize } from "@/app/tablero/types";
 import FeedbackButtons from "../shared/FeedbackButtons";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import CommentSection from "../shared/CommentSection";
-import { cn } from "@/lib/utils";
 
 interface FontOption {
   id: string;
@@ -212,7 +211,7 @@ const TypographyFeedback: React.FC<TypographyFeedbackProps> = ({
   };
   
   // Handler específico para feedback de tipografías
-  const handleFontFeedback = (type: string) => {
+  const handleFontFeedback = (type: 'positive' | 'negative' | 'comment') => {
     if (!activeFont) return;
     
     const fontId = activeFont.id;
@@ -220,12 +219,12 @@ const TypographyFeedback: React.FC<TypographyFeedbackProps> = ({
     if (type === 'comment') {
       setIsCommentMode(true);
       // El hook useSectionFeedback lo manejará cuando pasemos el tipo 'comment'
-      handleItemFeedback(fontId, type as any);
+      handleItemFeedback(fontId, 'comment');
       return;
     }
     
     // Usar nuestro hook para gestionar el feedback
-    handleItemFeedback(fontId, type as any);
+    handleItemFeedback(fontId, type);
   };
   
   // Handler específico para enviar comentarios de tipografías

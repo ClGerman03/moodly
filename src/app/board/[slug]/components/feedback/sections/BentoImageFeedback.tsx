@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import { motion, PanInfo } from "framer-motion";
+import { PanInfo } from "framer-motion";
 import { Section } from "@/app/tablero/types";
 import ImageFeedbackContainer from "../popups/imagefeedback/ImageFeedbackContainer";
 import ImageCarousel from "../layout/ImageCarousel";
@@ -22,6 +22,9 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const { isMobile } = useResponsiveLayout(containerRef);
   
+  // Estas variables no se utilizan en el componente actual, pero se mantienen 
+  // para futuros desarrollos o porque se usan en partes del código que no hemos modificado
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [tappedImage, setTappedImage] = useState<string | null>(null);
   
@@ -32,6 +35,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   // Utilizar el hook común para gestión de feedback
   const {
     selectedItemForComment,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     currentComment,
     setCurrentComment,
     handleItemFeedback,
@@ -77,7 +81,10 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
     }
   };
 
-  // Handler para seleccionar una imagen para feedback
+  // Esta función se define pero no se utiliza en el componente actual
+  // Se mantiene para futuros desarrollos o porque podría usarse en partes del código
+  // que no hemos modificado
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleImageTap = (imageUrl: string) => {
     setTappedImage(imageUrl === tappedImage ? null : imageUrl);
   };

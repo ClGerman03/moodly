@@ -91,7 +91,7 @@ const TextSummary: React.FC<TextSummaryProps> = ({
                   <MessageSquare size={12} className="mr-1" />
                   <span className="text-xs">Comment{comments.length > 1 ? ` ${idx + 1}` : ''}:</span>
                 </div>
-                "{comment}"
+                &ldquo;{comment}&rdquo;
               </div>
             ))}
           </div>

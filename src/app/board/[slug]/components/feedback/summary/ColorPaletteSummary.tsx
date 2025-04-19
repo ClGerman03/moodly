@@ -115,7 +115,7 @@ const ColorPaletteSummary: React.FC<ColorPaletteSummaryProps> = ({
                       <MessageSquare size={12} className="mr-1" />
                       <span className="text-xs">Comentario{commentsByPalette[paletteId].length > 1 ? ` ${idx + 1}` : ''}:</span>
                     </div>
-                    "{comment}"
+                    &ldquo;{comment}&rdquo;
                   </div>
                 ))}
               </div>

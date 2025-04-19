@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { ExternalLink, ThumbsUp, ThumbsDown, MessageSquare, ArrowUpRight, ArrowLeft, ArrowRight, Globe } from "lucide-react";
+import { ExternalLink, ArrowUpRight, ArrowLeft, ArrowRight, Globe } from "lucide-react";
 import { Section } from "@/app/tablero/types";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import FeedbackButtons from "../shared/FeedbackButtons";
@@ -235,7 +235,7 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
   };
   
   // Handler específico para feedback de enlaces
-  const handleLinkFeedback = (type: string) => {
+  const handleLinkFeedback = (type: 'positive' | 'negative' | 'comment') => {
     if (!activeLink) return;
     
     const linkId = activeLink.id;
@@ -243,12 +243,12 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
     if (type === 'comment') {
       setIsCommentMode(true);
       // El hook useSectionFeedback lo manejará cuando pasemos el tipo 'comment'
-      handleItemFeedback(linkId, type as any);
+      handleItemFeedback(linkId, type);
       return;
     }
     
     // Usar nuestro hook para gestionar el feedback
-    handleItemFeedback(linkId, type as any);
+    handleItemFeedback(linkId, type);
   };
   
   // Handler para abrir el enlace en nueva pestaña
