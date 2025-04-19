@@ -16,10 +16,13 @@ export function useImageFeedback(
   };
 
   // Manejar envío de comentario
-  const handleSubmitComment = () => {
+  const handleSubmitComment = (resetComment: boolean = true) => {
     if (comment.trim() && onSubmit) {
       onSubmit(comment);
-      setComment('');
+      // Solo limpiar el comentario si se indica
+      if (resetComment) {
+        setComment('');
+      }
     }
   };
 

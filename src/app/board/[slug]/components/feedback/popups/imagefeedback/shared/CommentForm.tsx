@@ -1,34 +1,35 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Send } from "lucide-react";
 
-interface CommentFormProps {
-  comment: string;
-  onCommentChange: (value: string) => void;
-  onSubmitComment: () => void;
+interface TextAreaProps {
+  value: string;
+  onChange: (value: string) => void;
   autoFocus?: boolean;
   maxLength?: number;
+  placeholder?: string;
+  onBlur?: () => void;
 }
 
 /**
- * Componente reutilizable para el formulario de comentarios
+ * Componente de campo de texto simple para feedback
+ * Versión minimalista sin botón de envío
  */
-const CommentForm: React.FC<CommentFormProps> = ({
-  comment,
-  onCommentChange,
-  onSubmitComment,
+const TextArea: React.FC<TextAreaProps> = ({
+  value,
+  onChange,
   autoFocus = false,
-  maxLength = 300
+  maxLength = 300,
+  placeholder = "Add your feedback here...",
+  onBlur
 }) => {
-  const commentRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Autoenfoque del textarea si es necesario
   useEffect(() => {
-    if (autoFocus && commentRef.current) {
+    if (autoFocus && textareaRef.current) {
       setTimeout(() => {
-        commentRef.current?.focus();
+        textareaRef.current?.focus();
       }, 100);
     }
   }, [autoFocus]);
@@ -36,37 +37,27 @@ const CommentForm: React.FC<CommentFormProps> = ({
   return (
     <div className="relative">
       <textarea
-        ref={commentRef}
-        value={comment}
-        onChange={(e) => onCommentChange(e.target.value)}
-        placeholder="Add a comment about this image..."
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 
-                 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
-                 resize-none focus:outline-none focus:ring-1 focus:ring-amber-300
-                 transition-all placeholder-gray-500 dark:placeholder-gray-400"
-        rows={2}
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        className="w-full p-2 bg-transparent text-gray-900 dark:text-gray-100
+                 resize-none border-b border-gray-200 dark:border-gray-700
+                 focus:outline-none focus:ring-0
+                 transition-all placeholder-gray-400 dark:placeholder-gray-500"
+        rows={3}
         maxLength={maxLength}
       />
       
-      {/* Contador de caracteres y botón enviar más minimalista */}
-      <div className="flex justify-between items-center mt-2">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {comment.length}/{maxLength}
+      {/* Solo contador de caracteres */}
+      <div className="flex justify-end items-center mt-1">
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+          {value.length}/{maxLength}
         </span>
-        <motion.button
-          className="bg-amber-400 text-black p-2 rounded-full shadow-sm
-                   hover:bg-amber-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onSubmitComment}
-          disabled={!comment.trim()}
-          aria-label="Send comment"
-        >
-          <Send size={14} />
-        </motion.button>
       </div>
     </div>
   );
 };
 
-export default CommentForm;
+export default TextArea;

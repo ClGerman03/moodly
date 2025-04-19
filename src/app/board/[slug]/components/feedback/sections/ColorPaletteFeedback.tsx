@@ -2,9 +2,12 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
-import { Section } from "@/app/tablero/types";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Section } from "@/app/tablero/types";
+import FeedbackButtons from "../shared/FeedbackButtons";
+import { useSectionFeedback } from "../hooks/useSectionFeedback";
+import CommentSection from "../shared/CommentSection";
+import { cn } from "@/lib/utils";
 
 interface ColorPalette {
   id: string;
@@ -18,19 +21,105 @@ interface ColorPaletteFeedbackProps {
 }
 
 /**
- * Componente de feedback para ColorPalette
- * Muestra las paletas de colores y permite dar feedback sobre ellas
+ * Componente presentacional para mostrar una paleta de colores
+ */
+interface ColorPaletteDisplayProps {
+  palette: ColorPalette;
+  isMobile: boolean;
+  onSwipe: (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void;
+}
+
+const ColorPaletteDisplay: React.FC<ColorPaletteDisplayProps> = ({ 
+  palette, 
+  isMobile,
+  onSwipe
+}) => {
+  return (
+    <motion.div 
+      key={palette.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="mb-6"
+      drag={isMobile ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.2}
+      onDragEnd={onSwipe}
+      whileTap={isMobile ? { cursor: "grabbing" } : undefined}
+    >
+      <div className="relative w-full rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
+        {/* Bento box grid layout - replicando el diseño de ColorPalette.tsx */}
+        <div className="bento-grid p-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+          {palette.colors.map((color, index) => {
+            // Determine the size of this color cell (some larger than others for visual interest)
+            const isLarge = index === 0 || index === 3; // First and fourth colors are larger
+            const gridClass = isLarge 
+              ? "col-span-2 row-span-2" 
+              : "col-span-1 row-span-1";
+            
+            return (
+              <motion.div 
+                key={`${index}-${color}`}
+                className={cn(
+                  "relative group min-h-[60px]",
+                  gridClass
+                )}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2, delay: index * 0.05 }}
+                layout
+              >
+                <motion.div
+                  className={cn(
+                    "w-full h-full rounded-xl shadow-sm relative overflow-hidden flex items-end justify-center",
+                    isLarge ? "min-h-[120px]" : "min-h-[60px]"
+                  )}
+                  style={{ backgroundColor: color }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  {/* Color hex code tooltip */}
+                  <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 bg-black/30 w-full flex justify-center backdrop-blur-sm">
+                    <span className="text-[10px] text-white/90 uppercase tracking-wider font-medium">
+                      {color.toUpperCase()}
+                    </span>
+                  </div>
+                </motion.div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+/**
+ * Componente principal que conecta la presentación con la lógica de feedback
  */
 const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
   section,
   onFeedback
 }) => {
-  // Estados para el manejo de paletas y feedback
+  // Estados para el manejo de paletas
   const [activePaletteIndex, setActivePaletteIndex] = useState<number>(0);
-  const [userFeedback, setUserFeedback] = useState<Record<string, string>>({});
   const [isCommentMode, setIsCommentMode] = useState<boolean>(false);
-  const [comment, setComment] = useState<string>("");
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  
+  // Utilizar el hook común para gestión de feedback
+  const {
+    currentComment,
+    setCurrentComment,
+    handleItemFeedback,
+    handleSubmitComment,
+    cancelComment,
+    getItemFeedback,
+    getItemComments
+  } = useSectionFeedback({
+    sectionId: section.id,
+    onFeedbackChange: onFeedback
+  });
   
   // Obtener las paletas del section
   const palettes = useMemo(() => {
@@ -84,59 +173,35 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
     }
   };
   
-  // Función para manejar el feedback de una paleta completa
+  // Handler específico para feedback de paletas
   const handlePaletteFeedback = (type: string) => {
     const paletteId = activePalette.id;
     
-    // Actualizar el estado local
-    setUserFeedback(prev => ({
-      ...prev,
-      [paletteId]: type
-    }));
-    
-    // Enviar feedback al componente padre
-    if (onFeedback) {
-      onFeedback(section.id, {
-        paletteFeedback: {
-          paletteId,
-          type,
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-    
-    // Si es un comentario, mostrar el panel de comentarios
+    // Si es comentario, mostrar el panel de comentarios
     if (type === 'comment') {
       setIsCommentMode(true);
+      return;
     }
+    
+    // Usar nuestro hook para gestionar el feedback
+    handleItemFeedback(paletteId, type as any);
   };
   
-  // Función para manejar el envío de un comentario
-  const handleSubmitComment = () => {
-    if (!comment.trim()) return;
+  // Handler específico para enviar comentarios de paletas
+  const handlePaletteCommentSubmit = () => {
+    if (!currentComment.trim()) return;
     
-    const paletteId = activePalette.id;
+    // Usar nuestro hook para enviar el comentario
+    handleSubmitComment();
     
-    // Enviar comentario al componente padre
-    if (onFeedback) {
-      onFeedback(section.id, {
-        paletteId,
-        paletteComment: {
-          comment,
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-    
-    // Actualizar el estado local
-    setUserFeedback(prev => ({
-      ...prev,
-      [paletteId]: 'comment'
-    }));
-    
-    // Resetear estados
+    // Resetear UI
     setIsCommentMode(false);
-    setComment("");
+  };
+  
+  // Handler para cancelar comentario
+  const handleCancelComment = () => {
+    cancelComment();
+    setIsCommentMode(false);
   };
   
   return (
@@ -146,183 +211,82 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
           <h3 className="text-lg font-light text-gray-700 dark:text-gray-300">
             {activePalette.name}
           </h3>
-          
-          {/* Navegación entre paletas (puntos) */}
-          {palettes.length > 1 && (
-            <div className="flex space-x-1 ml-4">
-              {palettes.map((_, index) => (
-                <button 
-                  key={index}
-                  onClick={() => setActivePaletteIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${index === activePaletteIndex 
-                    ? 'bg-gray-500 dark:bg-gray-300 scale-125' 
-                    : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
-                  aria-label={`Ver paleta ${index + 1}`}
-                />
-              ))}
-            </div>
-          )}
         </div>
         
-        {/* Información de colores */}
-        <div className="text-xs text-gray-400 dark:text-gray-500">
-          {activePalette.colors.length} colores
+        {/* Navegación entre paletas */}
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => handlePaletteChange(activePaletteIndex - 1)}
+            disabled={activePaletteIndex === 0}
+            className={`p-2 rounded-full ${
+              activePaletteIndex === 0 
+                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+            aria-label="Paleta anterior"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {activePaletteIndex + 1} / {palettes.length}
+          </span>
+          
+          <button 
+            onClick={() => handlePaletteChange(activePaletteIndex + 1)}
+            disabled={activePaletteIndex === palettes.length - 1}
+            className={`p-2 rounded-full ${
+              activePaletteIndex === palettes.length - 1 
+                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+            aria-label="Siguiente paleta"
+          >
+            <ArrowRight size={16} />
+          </button>
         </div>
       </div>
       
-      {/* Navegación entre paletas (flechas) */}
-      {palettes.length > 1 && (
-        <div className="flex justify-between mb-3">
-          <motion.button 
-            onClick={() => handlePaletteChange(activePaletteIndex - 1)}
-            className={`p-1 rounded-full ${activePaletteIndex === 0 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-            whileTap={activePaletteIndex > 0 ? { scale: 0.9 } : undefined}
-            disabled={activePaletteIndex === 0}
-          >
-            <ArrowLeft size={20} />
-          </motion.button>
-          <motion.button 
-            onClick={() => handlePaletteChange(activePaletteIndex + 1)}
-            className={`p-1 rounded-full ${activePaletteIndex === palettes.length - 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-            whileTap={activePaletteIndex < palettes.length - 1 ? { scale: 0.9 } : undefined}
-            disabled={activePaletteIndex === palettes.length - 1}
-          >
-            <ArrowRight size={20} />
-          </motion.button>
-        </div>
-      )}
+      {/* Componente presentacional para la paleta */}
+      <ColorPaletteDisplay 
+        palette={activePalette}
+        isMobile={isMobile}
+        onSwipe={handleSwipe}
+      />
       
-      {/* Visualización de la paleta con soporte para deslizamiento */}
-      <motion.div 
-        className="grid gap-4 mb-6"
-        drag={isMobile ? "x" : false}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.7}
-        onDragEnd={handleSwipe}
-      >
-        <div 
-          className="relative flex rounded-xl overflow-hidden h-20 sm:h-24 shadow-sm"
-          style={{ 
-            display: 'grid',
-            gridTemplateColumns: `repeat(${activePalette.colors.length}, 1fr)` 
-          }}
-        >
-          {activePalette.colors.map((color, index) => (
-            <motion.div 
-              key={index}
-              className="relative"
-              style={{ backgroundColor: color }}
-              whileHover={{ scale: 1.02 }}
-            >
-              {/* No hay interacción individual con los colores */}
-            </motion.div>
-          ))}
-          
-          {/* Indicador de feedback para toda la paleta */}
-          {userFeedback[activePalette.id] && (
-            <div className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center bg-black/50 text-white">
-              {userFeedback[activePalette.id] === 'positive' && <ThumbsUp size={12} />}
-              {userFeedback[activePalette.id] === 'negative' && <ThumbsDown size={12} />}
-              {userFeedback[activePalette.id] === 'comment' && <MessageSquare size={12} />}
-            </div>
-          )}
-        </div>
-        
-        {/* Botones de feedback para toda la paleta */}
-        <div className="flex justify-center gap-3 mt-2">
-          <motion.button 
-            className="bg-black/70 text-white p-2 rounded-full"
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handlePaletteFeedback('positive')}
-          >
-            <ThumbsUp size={16} strokeWidth={1.5} />
-          </motion.button>
-          <motion.button 
-            className="bg-black/70 text-white p-2 rounded-full"
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handlePaletteFeedback('negative')}
-          >
-            <ThumbsDown size={16} strokeWidth={1.5} />
-          </motion.button>
-          <motion.button 
-            className="bg-amber-400 text-black p-2 rounded-full"
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handlePaletteFeedback('comment')}
-          >
-            <MessageSquare size={16} strokeWidth={1.5} />
-          </motion.button>
-        </div>
-      </motion.div>
-      
-      {/* Panel de comentarios */}
-      <AnimatePresence>
-        {isCommentMode && (
-          <motion.div 
-            className="bg-white/90 dark:bg-gray-800/90 rounded-2xl shadow-lg p-5 mb-4 backdrop-blur-sm"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="flex mb-3 items-center gap-2">
-              <h4 className="font-light text-gray-800/80 dark:text-gray-200/80">
-                Comentario sobre esta paleta de colores
-              </h4>
-            </div>
-            
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Escribe tu comentario sobre este color..."
-              className="w-full p-3 rounded-xl border-0 
-                         bg-transparent text-gray-900 dark:text-gray-100
-                         resize-none focus:outline-none focus:ring-0
-                         transition-all placeholder-gray-500/50 dark:placeholder-gray-400/50"
-              rows={3}
-              maxLength={300}
-              autoFocus
+      {/* Panel de feedback */}
+      <div className="mt-6">
+        <AnimatePresence mode="wait">
+          {isCommentMode ? (
+            <CommentSection
+              itemId={activePalette.id}
+              currentComment={currentComment}
+              setCurrentComment={setCurrentComment}
+              onSubmitComment={handlePaletteCommentSubmit}
+              onCancelComment={handleCancelComment}
+              existingComments={getItemComments(activePalette.id)}
+              title="Añadir comentario sobre esta paleta"
             />
-            
-            {/* Botones de acción */}
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-xs text-gray-500/70 dark:text-gray-400/70">
-                {comment.length}/300
-              </span>
-              <div className="flex gap-2">
-                <motion.button 
-                  className="px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setIsCommentMode(false);
-                    setComment("");
-                  }}
-                >
-                  Cancelar
-                </motion.button>
-                <motion.button 
-                  className="px-3 py-1 rounded-full bg-amber-400 text-black disabled:opacity-40"
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSubmitComment}
-                  disabled={!comment.trim()}
-                >
-                  Enviar
-                </motion.button>
+          ) : (
+            <motion.div 
+              key="feedback-buttons"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+            >
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                ¿Qué te parece esta paleta de colores?
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* Sugerencias e información */}
-      <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-        ¡Comparte tu opinión!
-      </p>
-      
-      {/* Instrucciones adicionales para dispositivos móviles */}
-      {isMobile && palettes.length > 1 && (
-        <div className="mt-2 text-center text-xs text-gray-400">
-          {activePaletteIndex + 1} de {palettes.length}
-        </div>
-      )}
+              <FeedbackButtons 
+                onFeedback={handlePaletteFeedback}
+                currentFeedback={getItemFeedback(activePalette.id)}
+                useMessageIcon={true}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

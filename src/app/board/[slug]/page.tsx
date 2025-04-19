@@ -9,6 +9,7 @@ import WelcomeScreen from "./components/WelcomeScreen";
 import FarewellScreen from "./components/FarewellScreen";
 import NavigationControls from "./components/NavigationControls";
 import SectionViewer from "./components/SectionViewer";
+import FeedbackSummary from "./components/FeedbackSummary";
 
 // Estados posibles de la experiencia de feedback
 type ViewState = "welcome" | "sections" | "farewell" | "summary";
@@ -85,8 +86,8 @@ export default function PublicBoard() {
     if (boardData?.sections && currentSectionIndex < boardData.sections.length - 1) {
       setCurrentSectionIndex(currentSectionIndex + 1);
     } else {
-      // Mostrar la pantalla de despedida cuando se completan todas las secciones
-      setViewState("farewell");
+      // Mostrar el resumen del feedback proporcionado cuando se completan todas las secciones
+      setViewState("summary");
     }
     saveFeedbackProgress();
   };
@@ -124,6 +125,12 @@ export default function PublicBoard() {
     setViewState("sections");
   };
   
+  // Manejar la finalización del resumen de feedback para ir a la pantalla de despedida
+  const handleSummaryComplete = () => {
+    setViewState("farewell");
+    saveFeedbackProgress();
+  };
+
   // Manejar la finalización de la experiencia (desde FarewellScreen)
   const handleFinish = () => {
     // Only show acknowledgment that feedback is complete
@@ -197,6 +204,15 @@ export default function PublicBoard() {
             isLast={currentSectionIndex === boardData.sections.length - 1}
           />
         </>
+      )}
+      
+      {viewState === "summary" && (
+        <FeedbackSummary
+          sections={boardData.sections}
+          feedback={feedback}
+          clientName={clientName}
+          onFinish={handleSummaryComplete}
+        />
       )}
       
       {viewState === "farewell" && (

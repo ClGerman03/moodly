@@ -23,8 +23,8 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
 }) => {
   return (
     <motion.div 
-      className={`relative ${isPopover ? '' : 'mb-4'}`}
-      initial={{ y: -10, opacity: 0.8 }}
+      className={`relative ${isPopover ? 'mt-0' : 'mb-4'}`}
+      initial={{ y: 0, opacity: 0.8 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.1, duration: 0.3 }}
     >

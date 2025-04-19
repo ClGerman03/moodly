@@ -12,6 +12,7 @@ interface ImageFeedbackContainerProps {
   imageTitle?: string;
   imageTags?: string[];
   onSubmitComment?: (comment: string) => void;
+  existingComments?: Array<{imageUrl: string, comment: string, timestamp: string}>;
 }
 
 /**
@@ -24,9 +25,9 @@ const ImageFeedbackContainer: React.FC<ImageFeedbackContainerProps> = (props) =>
   
   // Renderizar el componente de popup o popover según el tamaño de pantalla
   return isDesktop ? (
-    <ImageFeedbackPopover {...props} />
+    <ImageFeedbackPopover {...props} existingComments={props.existingComments} />
   ) : (
-    <ImageFeedbackPopup {...props} />
+    <ImageFeedbackPopup {...props} existingComments={props.existingComments} />
   );
 };
 
