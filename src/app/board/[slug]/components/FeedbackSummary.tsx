@@ -6,7 +6,7 @@ import { Section } from "@/app/tablero/types";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { normalizeFeedback } from "./feedback/adapters/feedbackNormalizer";
 
-// Importar componentes especializados para cada tipo de resumen
+// Import specialized components for each summary type
 import ImageGallerySummary from "./feedback/summary/ImageGallerySummary";
 import ColorPaletteSummary from "./feedback/summary/ColorPaletteSummary";
 import TypographySummary from "./feedback/summary/TypographySummary";
@@ -21,8 +21,8 @@ interface FeedbackSummaryProps {
 }
 
 /**
- * Componente que muestra un resumen del feedback proporcionado por el usuario
- * para todas las secciones del tablero
+ * Component that displays a summary of the feedback provided by the user
+ * for all board sections
  */
 const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
   sections,
@@ -30,25 +30,23 @@ const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
   onFinish,
   clientName
 }) => {
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  // Changed from Record<string, boolean> to just string to allow only one open section
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
 
-  // Función para expandir/colapsar secciones
+  // Function to expand/collapse sections - modified to only allow one open section
   const toggleSection = (sectionId: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
+    setExpandedSectionId(prevId => prevId === sectionId ? null : sectionId);
   };
 
-  // Determinar si una sección tiene feedback
+  // Determine if a section has feedback
   const hasFeedback = (sectionId: string): boolean => {
     return !!feedback[sectionId] && Object.keys(feedback[sectionId]).length > 0;
   };
   
-  // Renderizar el feedback para una sección específica
+  // Render feedback for a specific section
   const renderSectionFeedback = (section: Section) => {
     const sectionFeedback = feedback[section.id] || {};
-    const isExpanded = expandedSections[section.id] || false;
+    const isExpanded = expandedSectionId === section.id;
     
     return (
       <motion.div 
@@ -56,10 +54,10 @@ const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+        className="mb-6 overflow-hidden"
       >
         <div 
-          className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+          className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors rounded-lg"
           onClick={() => toggleSection(section.id)}
         >
           <div className="flex items-center">
@@ -68,12 +66,10 @@ const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
             </h3>
           </div>
           <div className="flex items-center">
-            {hasFeedback(section.id) && (
-              <span className="text-xs font-light text-gray-500 dark:text-gray-400 mr-2">
-                {Object.keys(sectionFeedback).length} respuestas
-              </span>
-            )}
-            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            {isExpanded ? 
+              <ChevronUp size={18} className="text-gray-500 dark:text-gray-400" /> : 
+              <ChevronDown size={18} className="text-gray-500 dark:text-gray-400" />
+            }
           </div>
         </div>
         
@@ -84,11 +80,11 @@ const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="px-4 pb-4"
+              className="pl-3 pr-3 pb-2"
             >
               {hasFeedback(section.id) ? (
                 <div className="pt-2">
-                  {/* Usar los componentes especializados basados en el tipo de sección */}
+                  {/* Use specialized components based on section type */}
                   {renderSectionContent(section, sectionFeedback)}
                 </div>
               ) : (
@@ -103,12 +99,12 @@ const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
     );
   };
 
-  // Renderizar el contenido específico basado en el tipo de sección
+  // Render specific content based on section type
   const renderSectionContent = (section: Section, sectionFeedback: Record<string, unknown>) => {
-    // Normalizar el feedback para este tipo de sección
+    // Normalize feedback for this section type
     const normalizedFeedback = normalizeFeedback(section.type, sectionFeedback);
     
-    // Renderizar el componente apropiado según el tipo
+    // Render the appropriate component according to the type
     switch (section.type) {
       case "imageGallery":
         return <ImageGallerySummary section={section} normalizedFeedback={normalizedFeedback} />;
@@ -123,36 +119,48 @@ const FeedbackSummary: React.FC<FeedbackSummaryProps> = ({
       default:
         return (
           <div className="text-sm text-gray-500 dark:text-gray-400 italic">
-            Feedback no disponible para este tipo de sección
+            Feedback not available for this section type
           </div>
         );
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-light text-gray-900 dark:text-gray-100 mb-2">
-          Resumen de feedback
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {clientName ? `Feedback proporcionado por ${clientName}` : 'Feedback anónimo'}
-        </p>
-      </div>
-      
-      <div className="space-y-4">
-        {sections.map(renderSectionFeedback)}
-      </div>
-      
-      <div className="mt-8 flex justify-center">
-        <button
-          onClick={onFinish}
-          className="px-6 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+    <motion.div 
+      className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      <div className="w-full max-w-2xl mx-auto">
+        <motion.div
+          className="flex flex-col items-center text-center mb-8"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
         >
-          Finalizar
-        </button>
+          <h1 className="text-3xl font-light text-gray-800 dark:text-gray-100 mb-3">
+            Feedback Summary
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 font-light mb-6">
+            {clientName ? `Feedback provided by ${clientName}` : 'Anonymous feedback'}
+          </p>
+        </motion.div>
+        
+        <div className="space-y-2">
+          {sections.map(renderSectionFeedback)}
+        </div>
+        
+        <div className="mt-12 flex justify-center">
+          <button
+            onClick={onFinish}
+            className="w-auto px-6 py-2 text-sm font-light text-white dark:text-gray-100 transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500 focus:ring-offset-2 transform hover:scale-[1.02] opacity-90 hover:opacity-100 flex items-center justify-center"
+          >
+            Finish Review
+          </button>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

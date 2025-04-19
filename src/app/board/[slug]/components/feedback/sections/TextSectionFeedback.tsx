@@ -1,7 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageSquare } from "lucide-react";
 import { Section, TextContent, TextSize } from "@/app/tablero/types";
+import { useSectionFeedback } from "../hooks/useSectionFeedback";
+import FeedbackButtons from "../shared/FeedbackButtons";
+import CommentSection from "../shared/CommentSection";
 
 interface TextSectionFeedbackProps {
   section: Section;
@@ -9,27 +14,44 @@ interface TextSectionFeedbackProps {
 }
 
 /**
- * Componente para mostrar la sección de texto en la vista pública del tablero
- * Permite visualizar el título y subtítulo con el tamaño configurado
+ * Component for displaying text section in the public board view
+ * Allows viewing the title and subtitle with the configured size
+ * and providing feedback
  */
 const TextSectionFeedback: React.FC<TextSectionFeedbackProps> = ({
   section,
-  // onFeedback no se utiliza actualmente pero se mantiene en la interfaz
-  // para mantener consistencia con otros componentes de feedback
+  onFeedback
 }) => {
-  // Extraer el contenido de texto de la sección
+  // State for comment mode
+  const [isCommentMode, setIsCommentMode] = useState<boolean>(false);
+
+  // Use the common feedback hook
+  const {
+    currentComment,
+    setCurrentComment,
+    handleItemFeedback,
+    handleSubmitComment,
+    cancelComment,
+    getItemFeedback,
+    getItemComments
+  } = useSectionFeedback({
+    sectionId: section.id,
+    onFeedbackChange: onFeedback
+  });
+  
+  // Extract the text content from the section
   const textContent = section.data?.textContent as TextContent | undefined;
   
-  // Si no hay contenido de texto, mostrar un mensaje
+  // If there's no text content, show a message
   if (!textContent) {
     return (
       <div className="py-8 text-center text-gray-500">
-        Esta sección no contiene texto
+        This section contains no text
       </div>
     );
   }
 
-  // Determinar las clases de tamaño según la configuración
+  // Determine size classes based on configuration
   const getTitleClass = (size: TextSize) => {
     switch (size) {
       case "small":
@@ -54,14 +76,46 @@ const TextSectionFeedback: React.FC<TextSectionFeedbackProps> = ({
     }
   };
 
+  // Handler for text feedback
+  const handleTextFeedback = (type: string) => {
+    // We use 'text' as the item ID since there's only one text component
+    const textId = 'text';
+    
+    if (type === 'comment') {
+      setIsCommentMode(true);
+      handleItemFeedback(textId, type as any);
+      return;
+    }
+    
+    // Use our hook to manage feedback
+    handleItemFeedback(textId, type as any);
+  };
+  
+  // Handler for submitting text comments
+  const handleTextCommentSubmit = () => {
+    if (!currentComment.trim()) return;
+    
+    // Use our hook to submit the comment
+    handleSubmitComment();
+    
+    // Reset UI
+    setIsCommentMode(false);
+  };
+  
+  // Handler for canceling comment
+  const handleCancelComment = () => {
+    cancelComment();
+    setIsCommentMode(false);
+  };
+
   return (
-    <motion.div 
-      className="p-6 md:p-8"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="max-w-4xl mx-auto">
+    <div className="p-6 md:p-8">
+      <motion.div 
+        className="max-w-4xl mx-auto mb-8"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         {textContent.title && (
           <motion.h2 
             className={`${getTitleClass(textContent.size)} text-gray-800 dark:text-gray-100 mb-3`}
@@ -83,8 +137,42 @@ const TextSectionFeedback: React.FC<TextSectionFeedbackProps> = ({
             {textContent.subtitle}
           </motion.p>
         )}
+      </motion.div>
+      
+      {/* Feedback panel */}
+      <div className="mt-6 max-w-4xl mx-auto">
+        <AnimatePresence mode="wait">
+          {isCommentMode ? (
+            <CommentSection
+              itemId="text"
+              currentComment={currentComment}
+              setCurrentComment={setCurrentComment}
+              onSubmitComment={handleTextCommentSubmit}
+              onCancelComment={handleCancelComment}
+              existingComments={getItemComments('text')}
+              title="Add a comment about this text"
+            />
+          ) : (
+            <motion.div 
+              key="feedback-buttons"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+            >
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                What do you think about this text?
+              </div>
+              <FeedbackButtons 
+                onFeedback={handleTextFeedback}
+                currentFeedback={getItemFeedback('text')}
+                useMessageIcon={true}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
