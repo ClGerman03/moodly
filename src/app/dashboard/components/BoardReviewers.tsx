@@ -1,5 +1,5 @@
 import React from 'react';
-import Image from 'next/image';
+import { User } from 'lucide-react';
 
 // Tipo para la información de un revisor
 interface Reviewer {
@@ -31,36 +31,46 @@ const BoardReviewers: React.FC<BoardReviewersProps> = ({ reviewers = [], reviewC
   // Calculamos cuántos revisores adicionales hay
   const additionalReviewers = Math.max(0, (reviewCount || demoReviewers.length) - visibleReviewers.length);
   
+  // Generar colores distintos para los iconos de usuarios basados en su ID
+  const generateBackgroundColor = (userId: string, index: number) => {
+    const colors = [
+      'bg-blue-300',   // Azul pastel
+      'bg-green-300',  // Verde pastel
+      'bg-purple-300', // Morado pastel
+      'bg-pink-300',   // Rosa pastel
+      'bg-orange-300', // Naranja pastel
+      'bg-teal-300'    // Verde azulado pastel
+    ];
+    
+    // Usar el índice o el id para obtener un color consistente
+    const colorIndex = userId ? 
+      userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length : 
+      index % colors.length;
+      
+    return colors[colorIndex];
+  };
+
   return (
     <div className="flex items-center mt-3 mb-1">
       <div className="flex -space-x-2 mr-2">
-        {visibleReviewers.map((reviewer, index) => (
-          <div 
-            key={reviewer.id} 
-            className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
-            style={{ zIndex: visibleReviewers.length - index }}
-          >
-            {reviewer.avatar ? (
-              <Image 
-                src={reviewer.avatar} 
-                alt={reviewer.name || `Reviewer ${index + 1}`} 
-                width={24}
-                height={24}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              // Avatar placeholder con iniciales o color aleatorio
-              <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-medium">
-                {reviewer.name ? reviewer.name.charAt(0).toUpperCase() : index + 1}
-              </div>
-            )}
-          </div>
-        ))}
+        {visibleReviewers.map((reviewer, index) => {
+          const bgColorClass = generateBackgroundColor(reviewer.id, index);
+          
+          return (
+            <div 
+              key={reviewer.id} 
+              className={`w-7 h-7 rounded-full border-2 border-white ${bgColorClass} overflow-hidden flex items-center justify-center`}
+              style={{ zIndex: visibleReviewers.length - index }}
+            >
+              <User className="w-4 h-4 text-gray-700" />
+            </div>
+          );
+        })}
         
         {/* Mostrar indicador de revisores adicionales si hay más de los que mostramos */}
         {additionalReviewers > 0 && (
           <div 
-            className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium"
+            className="w-7 h-7 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium"
             style={{ zIndex: 0 }}
           >
             +{additionalReviewers}

@@ -11,8 +11,8 @@ import { Database } from '@/types/supabase';
 // Tipo para el perfil de usuario
 type ProfileType = Database['public']['Tables']['profiles']['Row'];
 
-// Clave para almacenar el perfil en localStorage
-const PROFILE_CACHE_KEY = 'moodly-profile-cache';
+// Función para generar la clave de caché específica para el usuario
+const getProfileCacheKey = (userId: string) => `moodly-profile-cache-${userId}`;
 
 // Tiempo de expiración en milisegundos (5 minutos)
 const CACHE_TTL = 5 * 60 * 1000;
@@ -42,7 +42,9 @@ export const cacheProfile = (userId: string, profile: ProfileType): void => {
   try {
     // Solo almacenar en localStorage en el cliente
     if (typeof window !== 'undefined') {
-      localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(cacheData));
+      const cacheKey = getProfileCacheKey(userId);
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log(`Perfil almacenado en caché para usuario: ${userId}`);
     }
   } catch (error) {
     // Error al guardar en localStorage - solo registrar, no interrumpir
@@ -59,26 +61,31 @@ export const getCachedProfile = (userId: string): ProfileType | null => {
   if (!userId || typeof window === 'undefined') return null;
   
   try {
+    // Obtener la clave de caché específica para este usuario
+    const cacheKey = getProfileCacheKey(userId);
+    
     // Intentar recuperar del localStorage
-    const cachedData = localStorage.getItem(PROFILE_CACHE_KEY);
-    if (!cachedData) return null;
+    const cachedData = localStorage.getItem(cacheKey);
+    if (!cachedData) {
+      console.log(`No hay caché disponible para usuario: ${userId}`);
+      return null;
+    }
     
     // Parsear los datos
     const cache: ProfileCache = JSON.parse(cachedData);
-    
-    // Verificar que sea el mismo usuario
-    if (cache.userId !== userId) return null;
     
     // Comprobar si ha expirado
     const now = Date.now();
     const isExpired = now - cache.timestamp > CACHE_TTL;
     
     if (isExpired) {
+      console.log(`Caché expirada para usuario: ${userId}`);
       // Eliminar la caché si ha expirado
-      localStorage.removeItem(PROFILE_CACHE_KEY);
+      localStorage.removeItem(cacheKey);
       return null;
     }
     
+    console.log(`Usando caché válida para usuario: ${userId}`);
     // Devolver el perfil si es válido
     return cache.profile;
   } catch (error) {
@@ -88,12 +95,31 @@ export const getCachedProfile = (userId: string): ProfileType | null => {
 };
 
 /**
- * Elimina el perfil almacenado en caché
+ * Elimina el perfil almacenado en caché para un usuario específico
+ * @param userId ID del usuario cuya caché se debe limpiar (opcional)
  */
-export const clearProfileCache = (): void => {
+export const clearProfileCache = (userId?: string): void => {
   try {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(PROFILE_CACHE_KEY);
+      if (userId) {
+        // Limpiar solo la caché del usuario específico
+        const cacheKey = getProfileCacheKey(userId);
+        localStorage.removeItem(cacheKey);
+        console.log(`Caché de perfil eliminada para usuario: ${userId}`);
+      } else {
+        // Buscar y eliminar todas las claves de caché de perfil
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('moodly-profile-cache-')) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        // Eliminar cada clave encontrada
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log(`Se eliminaron ${keysToRemove.length} cachés de perfil`);
+      }
     }
   } catch (error) {
     console.error('Error al limpiar caché de perfil:', error);

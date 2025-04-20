@@ -75,37 +75,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Función para obtener el perfil del usuario con debounce
+  // Función para obtener el perfil del usuario 
   const refreshProfile = useCallback(async () => {
     if (!user || isRefreshingProfile.current) return;
     
     try {
+      console.log('Actualizando perfil del usuario manualmente...');
       isRefreshingProfile.current = true;
       const fetchedProfile = await fetchProfileFromSupabase(user.id);
       
       if (fetchedProfile) {
         setProfile(fetchedProfile);
+        console.log('Perfil actualizado correctamente');
       }
     } finally {
       isRefreshingProfile.current = false;
     }
   }, [user]);
 
-  // Versión con debounce para llamadas múltiples
+  // Referencia para timeout (usado en la limpieza)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const debouncedRefreshProfile = useCallback(() => {
-    // Limpiar el timeout anterior si existe
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    // Crear nuevo timeout
-    timeoutRef.current = setTimeout(() => {
-      if (user) refreshProfile();
-      timeoutRef.current = null;
-    }, 300);
-  }, [refreshProfile, user]);
 
   // Iniciar sesión con Google
   const signInWithGoogle = async () => {
@@ -162,12 +151,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Obtener el estado de sesión inicial
     const fetchInitialSession = async () => {
       try {
+        console.log('Obteniendo sesión inicial...');
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         // Verificar que el componente aún esté montado antes de actualizar el estado
         if (!isMounted) return;
         
         if (initialSession) {
+          console.log('Sesión inicial obtenida, actualizando estado...');
           setSession(initialSession);
           setUser(initialSession.user);
           
@@ -177,14 +168,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const cachedProfile = getCachedProfile(userId);
             
             if (cachedProfile) {
+              console.log('Usando perfil en caché para sesión inicial');
               setProfile(cachedProfile);
             } else {
+              console.log('Perfil no en caché, obteniendo de Supabase...');
               const fetchedProfile = await fetchProfileFromSupabase(userId);
               if (fetchedProfile && isMounted) {
                 setProfile(fetchedProfile);
               }
             }
           }
+        } else {
+          console.log('No hay sesión inicial');
         }
         
         setIsLoading(false);
@@ -196,42 +191,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     fetchInitialSession();
     
-    // Suscribirse a los cambios de autenticación
+    // Suscribirse a los cambios de autenticación - solo una vez
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        console.log(`Evento de autenticación: ${event}`);
+        
         // Verificar que el componente aún esté montado antes de actualizar el estado
         if (!isMounted) return;
         
         // Actualizar estado solo si hay un cambio real en la sesión o usuario
         const newUser = newSession?.user || null;
-        const shouldUpdateUser = (
-          (user === null && newUser !== null) ||
-          (user !== null && newUser === null) ||
-          (user?.id !== newUser?.id)
-        );
         
-        if (shouldUpdateUser) {
+        // Actualizamos los estados basados en el evento
+        if (event === 'SIGNED_IN') {
+          console.log('Usuario ha iniciado sesión');
           setSession(newSession);
           setUser(newUser);
           
-          // Manejar cambios en el perfil según el evento
-          if (event === 'SIGNED_OUT') {
-            setProfile(null);
-            clearProfileCache();
-          } else if (newUser && event !== 'TOKEN_REFRESHED') {
-            // Solo obtener el perfil para eventos importantes, no para cada refresh de token
-            debouncedRefreshProfile();
+          if (newUser) {
+            // Intento usar caché primero
+            const cachedProfile = getCachedProfile(newUser.id);
+            if (cachedProfile) {
+              console.log('Usando perfil en caché para SIGNED_IN');
+              setProfile(cachedProfile);
+            } else {
+              // Solo hacemos una llamada a la API si no está en caché
+              console.log('Obteniendo perfil tras SIGNED_IN');
+              const fetchedProfile = await fetchProfileFromSupabase(newUser.id);
+              if (fetchedProfile && isMounted) {
+                setProfile(fetchedProfile);
+              }
+            }
+          }
+        } 
+        else if (event === 'SIGNED_OUT') {
+          console.log('Usuario ha cerrado sesión');
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          clearProfileCache();
+        }
+        else if (event === 'USER_UPDATED' && newUser) {
+          console.log('Usuario actualizado, refrescando perfil');
+          setSession(newSession);
+          setUser(newUser);
+          
+          // Actualizar perfil solo cuando los datos del usuario cambian
+          const fetchedProfile = await fetchProfileFromSupabase(newUser.id);
+          if (fetchedProfile && isMounted) {
+            setProfile(fetchedProfile);
           }
         }
+        // No hacemos nada para TOKEN_REFRESHED, ya que no necesitamos actualizar el perfil
       }
     );
     
     // Limpiar suscripción al desmontar y marcar componente como desmontado
     return () => {
+      console.log('Limpiando suscripción de autenticación');
       isMounted = false;
       subscription.unsubscribe();
+      
+      // Limpiar cualquier timeout pendiente
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
-  }, [debouncedRefreshProfile, user]); // Agregar dependencias faltantes
+  }, []); // No dependencias para evitar múltiples suscripciones
 
   // Valor del contexto
   const value = {

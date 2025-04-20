@@ -29,65 +29,77 @@ export default function BoardsSection() {
   const [boards, setBoards] = useState<BoardItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Efecto para cargar los tableros desde localStorage
-  useEffect(() => {
-    if (!user) return
-
-    // Simulamos un tiempo de carga para mostrar el indicador
-    const loadTimer = setTimeout(() => {
-      // Función para cargar los tableros del usuario desde localStorage
-      const loadBoards = () => {
-        try {
-          // Obtener todas las claves de localStorage
-          const keys = Object.keys(localStorage)
-          
-          // Filtrar solo las claves de tableros (formato: moodly-board-*)
-          const boardKeys = keys.filter(key => key.startsWith('moodly-board-'))
-          
-          // Extraer los datos de los tableros
-          const userBoards: BoardItem[] = []
-          
-          boardKeys.forEach(key => {
-            try {
-              const data = JSON.parse(localStorage.getItem(key) || '{}')
-              
-              // Solo incluir los tableros del usuario actual
-              if (data.userId === user.id) {
-                // Simulamos datos de revisores para la demo
-                const demoReviewCount = Math.floor(Math.random() * 5) + 1 // Entre 1 y 5 revisores
-                
-                userBoards.push({
-                  id: key.replace('moodly-board-', ''),
-                  name: data.name || 'Tablero sin nombre',
-                  updatedAt: data.updatedAt || data.createdAt,
-                  createdAt: data.createdAt,
-                  isActive: true, // Por defecto consideramos todos activos
-                  reviewCount: demoReviewCount // Agregamos datos de demo para revisores
-                })
-              }
-            } catch (error) {
-              console.error('Error al parsear tablero:', key, error)
-            }
-          })
-          
-          // Ordenar tableros por fecha de actualización (más reciente primero)
-          userBoards.sort((a, b) => 
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          )
-          
-          setBoards(userBoards)
-        } catch (error) {
-          console.error('Error al cargar tableros:', error)
-        } finally {
-          setIsLoading(false)
-        }
-      }
+  // Función para cargar los tableros del usuario desde localStorage
+  const loadBoards = () => {
+    try {
+      console.log('Cargando tableros desde localStorage...');
+      // Obtener todas las claves de localStorage
+      const keys = Object.keys(localStorage);
       
-      loadBoards()
-    }, 500) // Simular tiempo de carga de 500ms
+      // Filtrar solo las claves de tableros (formato: moodly-board-*)
+      const boardKeys = keys.filter(key => key.startsWith('moodly-board-'));
+      console.log(`Se encontraron ${boardKeys.length} claves de tableros en total`);
+      
+      // Extraer los datos de los tableros
+      const userBoards: BoardItem[] = [];
+      
+      boardKeys.forEach(key => {
+        try {
+          const data = JSON.parse(localStorage.getItem(key) || '{}');
+          
+          // Solo incluir los tableros del usuario actual
+          if (data.userId && user && data.userId === user.id) {
+            // Simulamos datos de revisores para la demo
+            const demoReviewCount = Math.floor(Math.random() * 5) + 1; // Entre 1 y 5 revisores
+            
+            userBoards.push({
+              id: key.replace('moodly-board-', ''),
+              name: data.name || 'Tablero sin nombre',
+              updatedAt: data.updatedAt || data.createdAt,
+              createdAt: data.createdAt,
+              isActive: true, // Por defecto consideramos todos activos
+              reviewCount: demoReviewCount // Agregamos datos de demo para revisores
+            });
+          }
+        } catch (error) {
+          console.error('Error al parsear tablero:', key, error);
+        }
+      });
+      
+      console.log(`Se cargaron ${userBoards.length} tableros para el usuario ${user?.id}`);
+      
+      // Ordenar tableros por fecha de actualización (más reciente primero)
+      userBoards.sort((a, b) => 
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      
+      setBoards(userBoards);
+    } catch (error) {
+      console.error('Error al cargar tableros:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Efecto para cargar los tableros cuando el usuario está disponible
+  useEffect(() => {
+    if (!user) {
+      // Si no hay usuario, mostrar el estado de carga y no hacer nada más
+      console.log('No hay usuario disponible para cargar tableros');
+      return;
+    }
+
+    console.log('Usuario disponible, cargando tableros...');
+    setIsLoading(true);
     
-    return () => clearTimeout(loadTimer)
-  }, [user])
+    // Cargar tableros con un pequeño retraso para dar tiempo a que se complete la autenticación
+    const loadTimer = setTimeout(() => {
+      loadBoards();
+    }, 300);
+    
+    return () => clearTimeout(loadTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   return (
     <div className="mt-8">

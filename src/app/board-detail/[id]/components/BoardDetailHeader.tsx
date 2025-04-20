@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { CalendarDays, Edit2, Share2 } from 'lucide-react';
+import { CalendarDays, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
@@ -90,14 +90,8 @@ const BoardDetailHeader: React.FC<BoardDetailHeaderProps> = ({ board }) => {
         
         <div className="flex flex-wrap gap-2">
           <ActionButton
-            icon={<Edit2 size={12} className="md:w-4 md:h-4" />}
-            text="Edit Board"
-            href={`/tablero?boardId=${board.id}`}
-          />
-          
-          <ActionButton
-            icon={<Share2 size={12} className="md:w-4 md:h-4" />}
-            text="View Public"
+            icon={<Eye size={12} className="md:w-4 md:h-4" />}
+            text="Preview"
             href={`/board/${board.id}`}
             target="_blank"
             primary

@@ -46,17 +46,17 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
   const getSectionIcon = (type: SectionType) => {
     switch (type) {
       case 'palette':
-        return <Palette className="w-5 h-5 text-orange-500" />;
+        return <Palette className="w-4 h-4 text-gray-600" />;
       case 'links':
-        return <Link2 className="w-5 h-5 text-blue-500" />;
+        return <Link2 className="w-4 h-4 text-gray-600" />;
       case 'typography':
-        return <Type className="w-5 h-5 text-purple-500" />;
+        return <Type className="w-4 h-4 text-gray-600" />;
       case 'text':
-        return <FileText className="w-5 h-5 text-green-500" />;
+        return <FileText className="w-4 h-4 text-gray-600" />;
       case 'imageGallery':
-        return <ImageIcon className="w-5 h-5 text-pink-500" />;
+        return <ImageIcon className="w-4 h-4 text-gray-600" />;
       default:
-        return <FileText className="w-5 h-5 text-gray-500" />;
+        return <FileText className="w-4 h-4 text-gray-600" />;
     }
   };
   
@@ -65,11 +65,11 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
     switch (section.type) {
       case 'palette':
         return (
-          <div className="flex space-x-1 mt-2">
+          <div className="flex flex-wrap gap-1 mt-1">
             {section.data?.palettes?.[0]?.colors.slice(0, 5).map((color, index) => (
               <div 
                 key={index}
-                className="w-6 h-6 rounded-full border border-gray-200"
+                className="w-4 h-4 rounded-full border border-gray-200"
                 style={{ backgroundColor: color }}
               />
             ))}
@@ -78,9 +78,10 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
       
       case 'links':
         return (
-          <div className="mt-2 space-y-1">
+          <div className="mt-1">
             {section.data?.links?.slice(0, 2).map((link, index) => (
-              <div key={index} className="text-xs text-gray-500 truncate">
+              <div key={index} className="text-xs text-gray-500 truncate flex items-center">
+                <span className="w-1 h-1 rounded-full bg-gray-300 mr-1"></span>
                 {link.title || link.url}
               </div>
             ))}
@@ -89,10 +90,11 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
       
       case 'typography':
         return (
-          <div className="mt-2 space-y-1">
+          <div className="mt-1">
             {section.data?.fonts?.slice(0, 2).map((font, index) => (
-              <div key={index} className="text-xs text-gray-500">
-                {font.name} ({font.category})
+              <div key={index} className="text-xs text-gray-500 flex items-center">
+                <span className="w-1 h-1 rounded-full bg-gray-300 mr-1"></span>
+                {font.name}
               </div>
             ))}
           </div>
@@ -100,18 +102,21 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
       
       case 'text':
         return (
-          <div className="mt-2">
+          <div className="mt-1">
             {section.data?.textContent?.title && (
-              <div className="text-xs text-gray-500 truncate">{section.data.textContent.title}</div>
+              <div className="text-xs text-gray-500 truncate flex items-center">
+                <span className="w-1 h-1 rounded-full bg-gray-300 mr-1"></span>
+                {section.data.textContent.title}
+              </div>
             )}
           </div>
         );
       
       case 'imageGallery':
         return (
-          <div className="flex space-x-1 mt-2">
+          <div className="flex space-x-1 mt-1">
             {section.data?.images?.slice(0, 3).map((image, index) => (
-              <div key={index} className="w-10 h-10 rounded bg-gray-100 overflow-hidden">
+              <div key={index} className="w-6 h-6 rounded-sm bg-gray-100 overflow-hidden">
                 <div 
                   className="w-full h-full bg-cover bg-center" 
                   style={{ backgroundImage: `url(${image})` }}
@@ -147,38 +152,46 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
   }
   
   return (
-    <div className="mb-8">
-      <h2 className="text-lg font-medium text-gray-800 mb-4">Board Sections</h2>
+    <div className="mt-8 mb-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-light text-gray-700">Board Sections</h2>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-3">
         {sections.map((section) => (
-          <div key={section.id} className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
-            <div className="flex items-center">
-              {getSectionIcon(section.type)}
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-gray-800">{section.title}</h3>
-                <p className="text-xs text-gray-500">{getSectionTypeName(section.type)}</p>
+          <div key={section.id} className="bg-white border-b border-gray-100 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                  {getSectionIcon(section.type)}
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-gray-800">{section.title}</h3>
+                  <p className="text-xs text-gray-500">{getSectionTypeName(section.type)}</p>
+                </div>
+              </div>
+              
+              {/* Estadísticas de feedback en forma de badges minimalistas */}
+              <div className="flex space-x-3">
+                <div className="flex items-center">
+                  <div className="px-2 py-1 bg-gray-50 rounded-full text-xs flex items-center">
+                    <span className="text-gray-700">{sectionFeedbackData[section.id]?.reactions || 0}</span>
+                    <span className="ml-1 text-gray-500">reactions</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="px-2 py-1 bg-gray-50 rounded-full text-xs flex items-center">
+                    <span className="text-gray-700">{sectionFeedbackData[section.id]?.comments || 0}</span>
+                    <span className="ml-1 text-gray-500">comments</span>
+                  </div>
+                </div>
               </div>
             </div>
             
             {/* Vista previa de la sección */}
-            {getSectionPreview(section)}
-            
-            {/* Feedback de la sección */}
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
-              <div className="flex items-center">
-                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600 mr-1.5">
-                  {sectionFeedbackData[section.id]?.reactions || 0}
-                </div>
-                <span className="text-xs text-gray-500">reactions</span>
-              </div>
-              
-              <div className="flex items-center">
-                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600 mr-1.5">
-                  {sectionFeedbackData[section.id]?.comments || 0}
-                </div>
-                <span className="text-xs text-gray-500">comments</span>
-              </div>
+            <div className="pl-11 mt-1">
+              {getSectionPreview(section)}
             </div>
           </div>
         ))}

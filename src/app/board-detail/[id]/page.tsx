@@ -154,11 +154,11 @@ export default function BoardDetailPage() {
             {/* Resumen del feedback recibido */}
             <BoardFeedbackOverview board={board} />
             
-            {/* Secciones del tablero */}
-            <BoardDetailSections board={board} />
-            
             {/* Feedback detallado por revisor */}
             <BoardReviewerFeedback board={board} />
+            
+            {/* Secciones del tablero */}
+            <BoardDetailSections board={board} />
           </>
         )}
       </div>

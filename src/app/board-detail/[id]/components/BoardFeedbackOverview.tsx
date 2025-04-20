@@ -1,6 +1,9 @@
-import React, { useMemo } from 'react';
-import { ThumbsUp, MessageSquare, Users } from 'lucide-react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import BoardReviewers from '@/app/dashboard/components/BoardReviewers';
+import { loadBoardFeedback } from '@/lib/feedbackService';
 
 interface BoardFeedbackOverviewProps {
   board: {
@@ -9,93 +12,208 @@ interface BoardFeedbackOverviewProps {
   };
 }
 
-// Función auxiliar para generar un número pseudoaleatorio determinístico basado en un string
-function generateSeededRandom(seed: string) {
-  // Convierte el string en un número simple
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash = hash & hash; // Convierte a entero de 32 bits
-  }
-  
-  // Genera un número entre 0 y 1 basado en el hash
-  const random = Math.abs(Math.sin(hash) * 10000) % 1;
-  return random;
+// Interfaz para las estadísticas de feedback
+interface FeedbackStats {
+  totalReactions: number;
+  positiveReactions: number;
+  negativeReactions: number;
+  neutralReactions: number; // Mantenemos por compatibilidad pero no lo usaremos
+  totalComments: number;
+  recentComments: string[];
+  loading: boolean;
 }
 
 const BoardFeedbackOverview: React.FC<BoardFeedbackOverviewProps> = ({ board }) => {
-  // Usamos useMemo para generar datos de ejemplo solo una vez por tablero
-  const feedbackStats = useMemo(() => {
-    // Usar generateSeededRandom para valores consistentes
-    const reactionsRandom = generateSeededRandom(board.id + '-reactions');
-    const commentsRandom = generateSeededRandom(board.id + '-comments');
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStats>({
+    totalReactions: 0,
+    positiveReactions: 0,
+    negativeReactions: 0,
+    neutralReactions: 0,
+    totalComments: 0,
+    recentComments: [],
+    loading: true
+  });
+  
+  // Estado para almacenar el número real de revisores
+  const [actualReviewerCount, setActualReviewerCount] = useState<number>(0);
+
+  // Cargar y procesar los datos de feedback reales
+  useEffect(() => {
+    if (!board.id) return;
     
-    const totalReactions = Math.floor(reactionsRandom * 20) + (board.reviewCount || 5);
-    const totalComments = Math.floor(commentsRandom * 15) + 2;
-    const positiveReactions = Math.floor(totalReactions * 0.7); // 70% positivas
+    // Cargar los datos de feedback del tablero
+    const boardFeedback = loadBoardFeedback(board.id);
     
-    return {
+    // Obtener el número real de revisores desde el servicio
+    const actualReviewers = boardFeedback.reviewers.length;
+    setActualReviewerCount(actualReviewers);
+    
+    // Calcular estadísticas agregadas
+    let positiveReactions = 0;
+    let negativeReactions = 0;
+    let totalComments = 0;
+    const allComments: { text: string; timestamp: string }[] = [];
+    
+    // Procesar datos de cada revisor
+    boardFeedback.reviewers.forEach(reviewer => {
+      // Conteo de comentarios totales a nivel de revisor, usando la misma lógica que en BoardReviewerFeedback
+      Object.values(reviewer.responses).forEach(section => {
+        totalComments += (section.comments?.length || 0);
+        
+        // Recolectar los comentarios para mostrar
+        if (section.comments) {
+          section.comments.forEach(comment => {
+            allComments.push({ text: comment.comment, timestamp: comment.timestamp });
+          });
+        }
+      });
+      
+      // Contar reacciones usando EXACTAMENTE la misma lógica que en BoardReviewerFeedback
+      Object.values(reviewer.responses).forEach(section => {
+        // IMPORTANTE: La lógica en BoardReviewerFeedback usa el operador OR (||) entre
+        // paletteFeedbacks y feedbackItems, no suma ambos valores
+        
+        // Para reacciones positivas:
+        if (section.paletteFeedbacks && section.paletteFeedbacks.length > 0) {
+          // Si hay paletteFeedbacks, usar ese conteo
+          positiveReactions += section.paletteFeedbacks.filter(f => f.type === 'positive').length;
+        } else if (section.feedbackItems) {
+          // Si no hay paletteFeedbacks, usar el conteo de feedbackItems
+          positiveReactions += Object.values(section.feedbackItems).filter(item => 
+            item.reaction === 'positive'
+          ).length;
+        }
+        
+        // Para reacciones negativas:
+        if (section.paletteFeedbacks && section.paletteFeedbacks.length > 0) {
+          // Si hay paletteFeedbacks, usar ese conteo
+          negativeReactions += section.paletteFeedbacks.filter(f => f.type === 'negative').length;
+        } else if (section.feedbackItems) {
+          // Si no hay paletteFeedbacks, usar el conteo de feedbackItems
+          negativeReactions += Object.values(section.feedbackItems).filter(item => 
+            item.reaction === 'negative'
+          ).length;
+        }
+        
+        // Añadir reacciones de imágenes si existen (esto sigue diferente lógica)
+        if (section.imageFeedback) {
+          const imageFeedbacks = Object.values(section.imageFeedback);
+          const positiveImages = imageFeedbacks.filter(reaction => reaction === 'positive').length;
+          const negativeImages = imageFeedbacks.filter(reaction => reaction === 'negative').length;
+          
+          // Solo contar imágenes si no hay otros tipos de feedback en la sección
+          if (!(section.paletteFeedbacks && section.paletteFeedbacks.length > 0) && 
+              !Object.keys(section.feedbackItems || {}).length) {
+            positiveReactions += positiveImages;
+            negativeReactions += negativeImages;
+          }
+        }
+      });
+    });
+    
+    // Ordenar comentarios por fecha, más recientes primero
+    allComments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    // Obtener los 2 comentarios más recientes
+    const recentComments = allComments.slice(0, 2).map(comment => comment.text);
+    
+    // Calcular total de reacciones (solo positivas y negativas)
+    const totalReactions = positiveReactions + negativeReactions;
+    
+    // Actualizar el estado con las estadísticas calculadas
+    setFeedbackStats({
       totalReactions,
+      positiveReactions,
+      negativeReactions,
+      neutralReactions: 0, // Ya no contamos las neutrales
       totalComments,
-      positiveReactions
-    };
-  }, [board.id, board.reviewCount]); // Solo recalcular si cambia el ID del tablero o el conteo de revisores
+      recentComments,
+      loading: false
+    });
+    
+  }, [board.id]); // Actualizar si cambia el ID del tablero
   
   return (
-    <div className="bg-gray-50 rounded-xl p-6 mb-8">
-      <h2 className="text-lg font-medium text-gray-800 mb-4">Feedback Overview</h2>
+    <div className="mt-8 mb-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-light text-gray-700">Feedback Overview</h2>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Resumen de revisores */}
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="flex items-center mb-3">
-            <Users className="w-5 h-5 text-blue-500 mr-2" />
-            <h3 className="text-sm font-medium text-gray-700">Reviewers</h3>
+        <div className="bg-white border-b border-gray-100 py-3">
+          <div className="flex items-center mb-2">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <span className="text-2xl font-light text-gray-700">{actualReviewerCount}</span>
+            </div>
+            <h3 className="ml-3 text-sm font-medium text-gray-800">Reviewers</h3>
           </div>
           
-          <div className="flex items-center justify-between">
-            <BoardReviewers reviewCount={board.reviewCount} />
-            <span className="text-2xl font-light text-gray-800">{board.reviewCount || 0}</span>
+          <div className="flex items-center pl-10">
+            <BoardReviewers reviewCount={actualReviewerCount} />
           </div>
         </div>
         
         {/* Resumen de reacciones */}
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="flex items-center mb-3">
-            <ThumbsUp className="w-5 h-5 text-green-500 mr-2" />
-            <h3 className="text-sm font-medium text-gray-700">Reactions</h3>
+        <div className="bg-white border-b border-gray-100 py-3">
+          <div className="flex items-center mb-2">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <span className="text-2xl font-light text-gray-700">{feedbackStats.totalReactions}</span>
+            </div>
+            <h3 className="ml-3 text-sm font-medium text-gray-800">Reactions</h3>
           </div>
           
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="h-2 bg-gray-100 rounded-full w-40 overflow-hidden">
-                <div 
-                  className="h-full bg-green-500 rounded-full" 
-                  style={{ width: `${(feedbackStats.positiveReactions / feedbackStats.totalReactions) * 100}%` }}
-                ></div>
+          <div className="flex items-center pl-11">
+            <div className="flex-1">
+              <div className="h-1.5 bg-gray-100 rounded-full w-full overflow-hidden flex">
+                {feedbackStats.totalReactions > 0 ? (
+                  <>
+                    <div 
+                      className="h-full bg-gray-600" 
+                      style={{ width: `${(feedbackStats.positiveReactions / feedbackStats.totalReactions) * 100}%` }}
+                    ></div>
+                    <div 
+                      className="h-full bg-gray-300" 
+                      style={{ width: `${(feedbackStats.negativeReactions / feedbackStats.totalReactions) * 100}%` }}
+                    ></div>
+                  </>
+                ) : null}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {feedbackStats.positiveReactions} positive of {feedbackStats.totalReactions} total
-              </p>
+              <div className="flex text-xs text-gray-500 mt-2 justify-between">
+                <div className="flex items-center">
+                  <ThumbsUp className="w-3 h-3 text-gray-600 mr-1" />
+                  <span>{feedbackStats.positiveReactions}</span>
+                </div>
+                <div className="flex items-center">
+                  <ThumbsDown className="w-3 h-3 text-gray-500 mr-1" />
+                  <span>{feedbackStats.negativeReactions}</span>
+                </div>
+              </div>
             </div>
-            <span className="text-2xl font-light text-gray-800">{feedbackStats.totalReactions}</span>
           </div>
         </div>
         
         {/* Resumen de comentarios */}
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="flex items-center mb-3">
-            <MessageSquare className="w-5 h-5 text-purple-500 mr-2" />
-            <h3 className="text-sm font-medium text-gray-700">Comments</h3>
+        <div className="bg-white border-b border-gray-100 py-3">
+          <div className="flex items-center mb-2">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <span className="text-2xl font-light text-gray-700">{feedbackStats.totalComments}</span>
+            </div>
+            <h3 className="ml-3 text-sm font-medium text-gray-800">Comments</h3>
           </div>
           
-          <div className="flex items-center justify-between">
-            <div className="space-y-1.5">
-              {/* Simulamos algunas previsualizaciones de comentarios */}
-              <p className="text-xs text-gray-500 line-clamp-1">&quot;I love the color palette choices!&quot;</p>
-              <p className="text-xs text-gray-500 line-clamp-1">&quot;The typography is cohesive with the overall theme.&quot;</p>
+          <div className="flex items-center pl-11">
+            <div className="space-y-1 flex-1">
+              {feedbackStats.loading ? (
+                <p className="text-xs text-gray-400">Loading...</p>
+              ) : feedbackStats.recentComments.length > 0 ? (
+                feedbackStats.recentComments.map((comment, index) => (
+                  <p key={index} className="text-xs text-gray-500 line-clamp-1">&quot;{comment}&quot;</p>
+                ))
+              ) : (
+                <p className="text-gray-500">This board doesn&apos;t have any feedback yet.</p>
+              )}
             </div>
-            <span className="text-2xl font-light text-gray-800">{feedbackStats.totalComments}</span>
           </div>
         </div>
       </div>
