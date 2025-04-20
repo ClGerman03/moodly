@@ -13,6 +13,20 @@ module.exports = {
           hover: '#4338CA', // Indigo-700
         },
       },
+      animation: {
+        'fade-in': 'fadeIn 0.2s ease-in-out',
+        'pulse-green': 'pulseGreen 2s infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'scale(0.98)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        pulseGreen: {
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '0.6' }
+        }
+      },
     },
   },
   plugins: [require('@tailwindcss/typography')],

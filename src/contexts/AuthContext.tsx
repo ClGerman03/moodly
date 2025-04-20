@@ -7,10 +7,11 @@
  * del usuario en toda la aplicación, utilizando Supabase Auth.
  */
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/supabase'
+import { getCachedProfile, cacheProfile, clearProfileCache } from '@/lib/profileCache'
 
 // Tipo para el perfil de usuario
 type ProfileType = Database['public']['Tables']['profiles']['Row']
@@ -35,23 +36,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<ProfileType | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-
+  
+  // Referencia para controlar si estamos ya obteniendo el perfil
+  const isRefreshingProfile = useRef(false)
+  
   // Función para obtener el perfil del usuario
-  const refreshProfile = useCallback(async () => {
-    if (!user) return
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-    
-    if (error) {
-      console.error('Error al cargar el perfil:', error)
-    } else if (data) {
-      setProfile(data)
+  const fetchProfileFromSupabase = async (userId: string): Promise<ProfileType | null> => {
+    try {
+      // Comprobar si ya tenemos el perfil en caché
+      const cachedProfile = getCachedProfile(userId);
+      if (cachedProfile) {
+        console.log('Usando perfil desde caché');
+        return cachedProfile;
+      }
+      
+      console.log('Obteniendo perfil desde Supabase');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      
+      if (error) {
+        console.error('Error al cargar el perfil:', error)
+        return null;
+      } 
+      
+      if (data) {
+        // Guardar en caché para futuras consultas
+        cacheProfile(userId, data);
+        return data;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error('Error inesperado al obtener perfil:', err);
+      return null;
     }
-  }, [user])
+  }
+
+  // Función para obtener el perfil del usuario con debounce
+  const refreshProfile = useCallback(async () => {
+    if (!user || isRefreshingProfile.current) return;
+    
+    try {
+      isRefreshingProfile.current = true;
+      const fetchedProfile = await fetchProfileFromSupabase(user.id);
+      
+      if (fetchedProfile) {
+        setProfile(fetchedProfile);
+      }
+    } finally {
+      isRefreshingProfile.current = false;
+    }
+  }, [user]);
+
+  // Versión con debounce para llamadas múltiples
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const debouncedRefreshProfile = useCallback(() => {
+    // Limpiar el timeout anterior si existe
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Crear nuevo timeout
+    timeoutRef.current = setTimeout(() => {
+      if (user) refreshProfile();
+      timeoutRef.current = null;
+    }, 300);
+  }, [refreshProfile, user]);
 
   // Iniciar sesión con Google
   const signInWithGoogle = async () => {
@@ -82,6 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       setSession(null);
       
+      // Limpiar la caché del perfil
+      clearProfileCache();
+      
       // Cerrar sesión en Supabase
       const { error } = await supabase.auth.signOut();
       
@@ -97,29 +154,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Efecto para escuchar cambios en la autenticación
+  // Efecto para gestionar el cambio de usuario y la sesión
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
     
     // Obtener el estado de sesión inicial
     const fetchInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      
-      // Verificar que el componente aún esté montado antes de actualizar el estado
-      if (!isMounted) return;
-      
-      if (initialSession) {
-        setSession(initialSession);
-        setUser(initialSession.user);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        // Solo obtener el perfil si tenemos un usuario y no lo hemos cargado aún
-        if (initialSession.user && !profile) {
-          await refreshProfile();
+        // Verificar que el componente aún esté montado antes de actualizar el estado
+        if (!isMounted) return;
+        
+        if (initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          
+          // Usar caché o cargar perfil si es necesario
+          if (initialSession.user) {
+            const userId = initialSession.user.id;
+            const cachedProfile = getCachedProfile(userId);
+            
+            if (cachedProfile) {
+              setProfile(cachedProfile);
+            } else {
+              const fetchedProfile = await fetchProfileFromSupabase(userId);
+              if (fetchedProfile && isMounted) {
+                setProfile(fetchedProfile);
+              }
+            }
+          }
         }
+        
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error al obtener sesión inicial:', err);
+        if (isMounted) setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     fetchInitialSession();
@@ -142,16 +214,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(newSession);
           setUser(newUser);
           
-          // Solo obtener el perfil si tenemos un usuario nuevo
-          if (newUser && event !== 'TOKEN_REFRESHED') {
-            await refreshProfile();
-          }
-          
-          // Solo refrescar la página en eventos específicos que lo requieran
-          // como SIGNED_IN o SIGNED_OUT, pero NO en cada cambio de estado
-          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-            // No llamar a router.refresh() aquí para evitar bucles infinitos
-            // En su lugar, solo hacemos navegación puntual cuando realmente hace falta
+          // Manejar cambios en el perfil según el evento
+          if (event === 'SIGNED_OUT') {
+            setProfile(null);
+            clearProfileCache();
+          } else if (newUser && event !== 'TOKEN_REFRESHED') {
+            // Solo obtener el perfil para eventos importantes, no para cada refresh de token
+            debouncedRefreshProfile();
           }
         }
       }
@@ -162,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [user, profile, refreshProfile])
+  }, [debouncedRefreshProfile, user]); // Agregar dependencias faltantes
 
   // Valor del contexto
   const value = {
