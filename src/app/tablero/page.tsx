@@ -7,6 +7,8 @@ import SharePopup from './components/popups/SharePopup';
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Section } from './types';
+import { boardService, sectionService } from "@/services";
+import { toast } from "react-hot-toast";
 
 export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
@@ -18,6 +20,8 @@ export default function Tablero() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [publishedSlug, setPublishedSlug] = useState<string>("");
+  const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sectionManagerRef = useRef<{ getSections: () => Section[] }>(null);
   
@@ -38,11 +42,23 @@ export default function Tablero() {
   }, [isLoading, user, isNameSet, boardName]); // Incluimos todas las dependencias utilizadas
   
   // Función para manejar la publicación del tablero
-  const handlePublishBoard = (slug: string) => {
+  const handlePublishBoard = async (slug: string) => {
     try {
+      setIsPublishing(true);
+      
       // Verificar que el SectionManager tenga una referencia válida
       if (!sectionManagerRef.current) {
         console.error("No se puede acceder a las secciones del tablero");
+        toast.error("Error accessing board sections");
+        setIsPublishing(false);
+        return;
+      }
+      
+      // Verificar que el usuario esté autenticado
+      if (!user) {
+        console.error("User not authenticated");
+        toast.error("You must be logged in to publish a board");
+        setIsPublishing(false);
         return;
       }
       
@@ -50,21 +66,78 @@ export default function Tablero() {
       const sections = sectionManagerRef.current.getSections();
       console.log('Publicando tablero - Secciones procesadas:', sections);
       
-      // Crear un objeto con los datos del tablero
+      // Crear un objeto con los datos del tablero para Supabase
       const boardData = {
+        slug: slug,
         name: boardName,
-        sections,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isPublished: true,
-        userId: user?.id || "anonymous",
+        user_id: user.id,
+        is_published: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       
-      // Serializar a JSON y guardar en localStorage
-      const serializedData = JSON.stringify(boardData);
-      console.log('Tamaño de datos serializados:', serializedData.length, 'bytes');
-      console.log('Clave de localStorage:', `moodly-board-${slug}`);
-      localStorage.setItem(`moodly-board-${slug}`, serializedData);
+      let boardId = currentBoardId;
+      
+      // Si no tenemos un ID de tablero, creamos uno nuevo
+      if (!boardId) {
+        try {
+          const createdBoard = await boardService.createBoard(boardData);
+          boardId = createdBoard.id;
+          setCurrentBoardId(boardId);
+        } catch (error) {
+          console.error("Error creating board:", error);
+          toast.error("Error creating board");
+          setIsPublishing(false);
+          return;
+        }
+      } else {
+        // Si ya tenemos un ID, actualizamos el tablero existente
+        try {
+          await boardService.updateBoard(boardId, {
+            slug: slug,
+            name: boardName,
+            is_published: true,
+            updated_at: new Date().toISOString()
+          });
+        } catch (error) {
+          console.error("Error updating board:", error);
+          toast.error("Error updating board");
+          setIsPublishing(false);
+          return;
+        }
+      }
+      
+      // Guardar las secciones
+      try {
+        if (boardId) {
+          await sectionService.saveSections(boardId, sections);
+        }
+      } catch (error) {
+        console.error("Error guardando secciones:", error);
+        toast.error("Error saving sections");
+        setIsPublishing(false);
+        return;
+      }
+      
+      // Para compatibilidad, seguimos guardando en localStorage temporalmente
+      try {
+        // Crear un objeto con los datos del tablero para localStorage (formato actual)
+        const legacyBoardData = {
+          name: boardName,
+          sections,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isPublished: true,
+          userId: user.id,
+        };
+        
+        // Serializar a JSON y guardar en localStorage
+        const serializedData = JSON.stringify(legacyBoardData);
+        localStorage.setItem(`moodly-board-${slug}`, serializedData);
+      } catch (error) {
+        console.error("Error al guardar en localStorage:", error);
+        // No mostramos error al usuario ya que Supabase es ahora el almacenamiento principal
+      }
       
       // Actualizar el estado
       setIsPublished(true);
@@ -74,9 +147,13 @@ export default function Tablero() {
       const shareUrl = `${window.location.origin}/board/${slug}`;
       console.log('URL para compartir:', shareUrl);
       
+      toast.success("Board published successfully!");
       console.log(`Tablero publicado con slug: ${slug}`);
     } catch (error) {
       console.error("Error al publicar el tablero:", error);
+      toast.error("Error publishing board");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -93,15 +170,17 @@ export default function Tablero() {
         setShowWelcome(true);
         setIsTransitioning(false);
         
-        // Después de mostrar el mensaje de bienvenida por un tiempo, mostrar el tablero
+        // Esperar a que el mensaje de bienvenida esté visible antes de transicionar a la pantalla principal
         setTimeout(() => {
+          // Iniciar fade-out del mensaje de bienvenida
           setIsTransitioning(true);
           
+          // Esperar a que termine el fade-out antes de mostrar la pantalla principal
           setTimeout(() => {
             setShowWelcome(false);
             setIsNameSet(true);
             
-            // Iniciar la animación de fade-in para el tablero
+            // Aseguramos que la transición a la pantalla principal sea suave
             setTimeout(() => {
               setIsTransitioning(false);
             }, 100);

@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Section } from "@/app/tablero/types";
+import { toast } from "react-hot-toast";
+
+// Servicios
+import { boardService, sectionService, feedbackService } from "@/services";
+import { adaptBoardForDisplay, adaptLocalStorageBoardForDisplay, DisplayBoard } from "@/utils/adapters/boardAdapter";
 
 // Componentes de la experiencia de feedback
 import WelcomeScreen from "./components/WelcomeScreen";
@@ -16,10 +21,10 @@ type ViewState = "welcome" | "sections" | "farewell" | "summary";
 
 export default function PublicBoard() {
   const { slug } = useParams();
-  const [boardData, setBoardData] = useState<{ name: string; sections: Section[] } | null>(null);
+  const [boardData, setBoardData] = useState<DisplayBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [dataSource, setDataSource] = useState<"supabase" | "localStorage" | null>(null);
   
   // Estados para la experiencia de feedback
   const [viewState, setViewState] = useState<ViewState>("welcome");
@@ -28,55 +33,100 @@ export default function PublicBoard() {
   const [feedback, setFeedback] = useState<Record<string, Record<string, unknown>>>({});
 
   useEffect(() => {
-    if (slug && typeof slug === "string") {
-      console.log('Cargando tablero con slug:', slug);
-      // Buscar el tablero en localStorage
+    async function loadBoard() {
+      if (!slug || typeof slug !== "string") {
+        setError("Invalid board URL");
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
       try {
-        const localStorageKey = `moodly-board-${slug}`;
-        console.log('Buscando en localStorage con clave:', localStorageKey);
+        // 1. Intentar cargar desde Supabase
+        const board = await boardService.getBoardBySlug(slug);
         
-        const savedBoard = localStorage.getItem(localStorageKey);
-        console.log('Datos encontrados en localStorage:', savedBoard ? 'Sí' : 'No');
-        
-        if (savedBoard) {
-          // Parsear los datos guardados
-          const parsedData = JSON.parse(savedBoard);
-          console.log('Datos parseados:', parsedData);
+        if (board) {
+          console.log('Tablero encontrado en Supabase:', board.name);
           
-          // Verificar que los datos tengan la estructura esperada
-          if (parsedData && parsedData.name && Array.isArray(parsedData.sections)) {
-            console.log('Estructura de datos válida, cargando tablero');
-            setBoardData(parsedData);
+          try {
+            // Cargar las secciones
+            const sections = await sectionService.getSectionsByBoardId(board.id);
             
-            // Restaurar progreso del feedback si existe
-            const savedFeedback = localStorage.getItem(`moodly-feedback-${slug}-${clientName}`);
-            if (savedFeedback && clientName) {
-              try {
-                const parsedFeedback = JSON.parse(savedFeedback);
-                setFeedback(parsedFeedback.responses || {});
-                
-                // Restaurar la última sección vista
-                if (parsedFeedback.lastViewedSection !== undefined) {
-                  setCurrentSectionIndex(parsedFeedback.lastViewedSection);
-                  setViewState("sections");
-                }
-              } catch (e) {
-                console.error("Error al restaurar el progreso del feedback:", e);
-              }
+            if (sections && sections.length > 0) {
+              // Adaptar los datos al formato esperado por la aplicación
+              const adaptedData = adaptBoardForDisplay(board, sections);
+              setBoardData(adaptedData);
+              setDataSource("supabase");
+              
+              console.log('Tablero cargado desde Supabase con', sections.length, 'secciones');
+            } else {
+              setError("No sections found for this board");
             }
-          } else {
-            console.error('Estructura de datos inválida:', parsedData);
-            setError("Formato de tablero inválido");
+          } catch (sectionError) {
+            console.error("Error loading sections:", sectionError);
+            setError("Error loading board sections");
           }
         } else {
-          console.log('No se encontró ningún tablero con ese slug');
-          setError("Tablero no encontrado");
+          console.log('Tablero no encontrado en Supabase, buscando en localStorage...');
+          
+          // 2. Si no se encuentra en Supabase, buscar en localStorage (compatibilidad)
+          const localStorageKey = `moodly-board-${slug}`;
+          const savedBoard = localStorage.getItem(localStorageKey);
+          
+          if (savedBoard) {
+            try {
+              const parsedData = JSON.parse(savedBoard);
+              const adaptedLocalData = adaptLocalStorageBoardForDisplay(parsedData);
+              
+              if (adaptedLocalData) {
+                setBoardData(adaptedLocalData);
+                setDataSource("localStorage");
+                console.log('Tablero cargado desde localStorage');
+              } else {
+                setError("Invalid board data format");
+              }
+            } catch (parseError) {
+              console.error("Error parsing localStorage data:", parseError);
+              setError("Error loading board data");
+            }
+          } else {
+            setError("Board not found");
+          }
         }
       } catch (err) {
-        console.error("Error al cargar el tablero:", err);
-        setError("Error al cargar el tablero");
+        console.error("Error loading board:", err);
+        setError("Error connecting to the database");
       } finally {
         setLoading(false);
+      }
+    }
+    
+    loadBoard();
+  }, [slug]);
+  
+  // Cargar feedback existente cuando se establece el nombre del cliente
+  useEffect(() => {
+    if (slug && typeof slug === "string" && clientName) {
+      // Intentar cargar feedback existente
+      const savedFeedback = feedbackService.getLocalFeedback(slug, clientName);
+      
+      if (savedFeedback) {
+        console.log('Feedback previo encontrado para', clientName);
+        setFeedback(savedFeedback.responses || {});
+        
+        // Restaurar la última sección vista
+        if (savedFeedback.lastViewedSection !== undefined) {
+          setCurrentSectionIndex(savedFeedback.lastViewedSection);
+          setViewState("sections");
+          
+          // Notificar al usuario que se ha restaurado su progreso
+          toast.success(`Welcome back, ${clientName}! Your progress has been restored.`, {
+            duration: 3000,
+            position: 'bottom-center'
+          });
+        }
       }
     }
   }, [slug, clientName]);
@@ -98,7 +148,7 @@ export default function PublicBoard() {
     }
   };
   
-  // Guardar selección para la sección actual
+  // Guardar feedback para una sección específica
   const handleFeedback = (sectionId: string, data: Record<string, unknown>) => {
     setFeedback(prev => ({
       ...prev,
@@ -108,15 +158,14 @@ export default function PublicBoard() {
   
   // Guardar progreso en localStorage
   const saveFeedbackProgress = () => {
-    if (!slug || !clientName) return;
+    if (!slug || typeof slug !== "string" || !clientName) return;
     
-    localStorage.setItem(`moodly-feedback-${slug}-${clientName}`, JSON.stringify({
-      boardId: slug,
+    feedbackService.saveLocalFeedback(
+      slug,
       clientName,
-      responses: feedback,
-      lastViewedSection: currentSectionIndex,
-      lastUpdated: new Date().toISOString()
-    }));
+      feedback,
+      currentSectionIndex
+    );
   };
   
   // Manejar el inicio de la experiencia (desde WelcomeScreen)
@@ -134,9 +183,13 @@ export default function PublicBoard() {
   // Manejar la finalización de la experiencia (desde FarewellScreen)
   const handleFinish = () => {
     // Only show acknowledgment that feedback is complete
-    // No redirection needed as this is for end users providing feedback
     console.log("Feedback process completed");
-    // Optional: Any final actions like saving to server can be added here
+    
+    // Notificar al usuario
+    toast.success("Thank you for your feedback!", {
+      duration: 5000,
+      position: 'bottom-center'
+    });
   };
 
   if (loading) {
@@ -144,7 +197,7 @@ export default function PublicBoard() {
       <div className="flex justify-center items-center min-h-screen">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 dark:border-gray-100 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Cargando tablero...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading board...</p>
         </div>
       </div>
     );
@@ -155,16 +208,16 @@ export default function PublicBoard() {
       <div className="flex justify-center items-center min-h-screen">
         <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md max-w-md w-full text-center">
           <h2 className="text-2xl font-light text-gray-800 dark:text-gray-200 mb-4">
-            {error || "Tablero no encontrado"}
+            {error || "Board not found"}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            El tablero que estás buscando no existe o ha sido eliminado.
+            The board you're looking for doesn't exist or has been removed.
           </p>
           <a 
             href="/"
             className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            Volver al inicio
+            Return to home
           </a>
         </div>
       </div>
@@ -182,9 +235,7 @@ export default function PublicBoard() {
       
       {viewState === "sections" && (
         <>
-          {/* El componente ProgressIndicator ha sido eliminado para una experiencia más limpia */}
-          
-          <div className="pt-6 pb-16"> {/* Reducimos el padding inferior */}
+          <div className="pt-6 pb-16">
             <header className="text-center mb-6">
               <h1 className="text-2xl font-light text-gray-800 dark:text-gray-200">
                 {boardData.name}

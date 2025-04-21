@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LucideCheck, LucideX, LucideUsers, LucideSend } from "lucide-react";
+import { LucideCheck, LucideX } from "lucide-react";
+import { boardService } from "@/services";
 
 interface SharePopupProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ interface SharePopupProps {
 }
 
 /**
- * Component for sharing the board via a custom URL or by inviting users
+ * Component for sharing the board via a custom URL
  */
 const SharePopup: React.FC<SharePopupProps> = ({
   isOpen,
@@ -34,13 +35,10 @@ const SharePopup: React.FC<SharePopupProps> = ({
   });
   const [showUrlSuccess, setShowUrlSuccess] = useState(false);
   const [publishingError, setPublishingError] = useState<string | null>(null);
-  
-  // Estado para compartir con usuarios
-  const [userEmail, setUserEmail] = useState("");
-  const [sharedUsers, setSharedUsers] = useState<string[]>([]);
   const [isPublished, setIsPublished] = useState(false);
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
   const [boardLink, setBoardLink] = useState<string>("");
+  const [isChecking, setIsChecking] = useState(false);
   
   // Referencias para detectar clics fuera del popup
   const popupRef = useRef<HTMLDivElement>(null);
@@ -100,13 +98,8 @@ const SharePopup: React.FC<SharePopupProps> = ({
     };
   }, [isOpen, historyStateAdded, onClose]);
   
-  // Validar formato de email
-  const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-  
   // Publicar tablero con URL personalizada
-  const handlePublish = () => {
+  const handlePublish = async () => {
     try {
       // Verificar que el slug sea válido
       if (!customUrlSegment || customUrlSegment.trim() === "") {
@@ -121,6 +114,22 @@ const SharePopup: React.FC<SharePopupProps> = ({
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-');
       
+      // Verificar disponibilidad del slug en Supabase
+      setIsChecking(true);
+      try {
+        const isAvailable = await boardService.isSlugAvailable(finalSlug);
+        if (!isAvailable) {
+          setPublishingError("This URL is already taken. Please try a different one.");
+          setIsChecking(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking slug availability:", error);
+        setPublishingError("Could not verify URL availability. Please try again.");
+        setIsChecking(false);
+        return;
+      }
+      
       // Llamar a la función de publicación proporcionada como prop
       onPublish(finalSlug);
       
@@ -132,6 +141,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
       setIsPublished(true);
       setShowUrlSuccess(true);
       setPublishingError(null);
+      setIsChecking(false);
       
       // Ocultar el mensaje de éxito después de 3 segundos
       setTimeout(() => {
@@ -140,22 +150,10 @@ const SharePopup: React.FC<SharePopupProps> = ({
     } catch (error) {
       console.error("Error publishing the board:", error);
       setPublishingError("An error occurred while publishing the board. Please try again.");
+      setIsChecking(false);
     }
   };
-  
-  // Añadir usuario a la lista de compartidos
-  const handleAddUser = () => {
-    if (userEmail && !sharedUsers.includes(userEmail)) {
-      setSharedUsers([...sharedUsers, userEmail]);
-      setUserEmail("");
-    }
-  };
-  
-  // Eliminar usuario de la lista de compartidos
-  const handleRemoveUser = (userToRemove: string) => {
-    setSharedUsers(sharedUsers.filter(user => user !== userToRemove));
-  };
-  
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -166,202 +164,136 @@ const SharePopup: React.FC<SharePopupProps> = ({
           exit={{ opacity: 0 }}
         >
           {/* Overlay */}
-          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+          <div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
           
-          {/* Popup Container */}
+          {/* Popup */}
           <motion.div
             ref={popupRef}
-            className="relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md overflow-hidden"
-            initial={{ scale: 0.95, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden z-10"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.5 }}
           >
             {/* Header */}
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 p-4">
-              <h2 className="text-xl font-light text-gray-800 dark:text-gray-200">Share Board</h2>
-              <button 
-                onClick={() => {
-                  // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
-                  if (historyStateAdded && typeof window !== 'undefined') {
-                    setHistoryStateAdded(false);
-                    window.history.back();
-                  }
-                  onClose();
-                }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-base font-medium text-gray-700 dark:text-gray-200">
+                Share your board
+              </h3>
+              <button
+                onClick={onClose}
+                className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-700"
               >
-                <LucideX size={18} strokeWidth={1.5} />
+                <LucideX size={18} />
               </button>
             </div>
             
             {/* Content */}
-            <div className="p-5">
+            <div className="p-4 space-y-4">
               {/* Sección de URL personalizada */}
-              <div className="mb-6">
-                <div className="flex flex-col mb-2">
-                  <label htmlFor="custom-url" className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                    Customize your board URL
-                  </label>
-                  <div className="flex items-center">
-                    <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-l-md text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      www.moodly.com/
-                    </div>
-                    <input
-                      id="custom-url"
-                      type="text"
-                      value={customUrlSegment}
-                      onChange={(e) => setCustomUrlSegment(e.target.value.trim().replace(/\s+/g, '-'))}
-                      className="flex-1 px-3 py-2 text-sm border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-r-md focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
-                      placeholder="mi-tablero"
-                    />
+              <div className="flex flex-col mb-2">
+                <label htmlFor="custom-url" className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+                  Custom URL
+                </label>
+                <div className="flex">
+                  <div className="flex-shrink-0 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border-r-0 border-0 rounded-l-md text-sm text-gray-500 dark:text-gray-400">
+                    {window.location.origin}/board/
                   </div>
-                  
-                  {showUrlSuccess && (
-                    <motion.div 
-                      className="flex items-center mt-2 text-green-600 dark:text-green-400 text-xs"
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <LucideCheck size={14} className="mr-1" /> URL successfully published
-                    </motion.div>
-                  )}
+                  <input
+                    id="custom-url"
+                    type="text"
+                    value={customUrlSegment}
+                    onChange={(e) => setCustomUrlSegment(e.target.value.replace(/\s+/g, '-'))}
+                    className="flex-1 px-3 py-2 text-sm rounded-r-md border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
+                    placeholder="mi-tablero"
+                  />
                 </div>
-                
-                <button
-                  onClick={handlePublish}
-                  disabled={!customUrlSegment || customUrlSegment.length < 3}
-                  className={`mt-2 w-full py-2 px-4 rounded-md transition-colors ${
-                    isPublished
-                      ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                      : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                  }`}
-                >
-                  {isPublished ? "Published" : "Publish"}
-                </button>
-                
-                {/* Mensaje de error */}
-                <AnimatePresence>
-                  {publishingError && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="mt-3 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded-md"
-                    >
-                      {publishingError}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                
-                {/* Enlace compartible si está publicado */}
-                {isPublished && boardLink && (
-                  <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-md">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Share this link:
-                    </p>
-                    <div className="flex">
-                      <input
-                        type="text"
-                        readOnly
-                        value={boardLink}
-                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-l-md bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200"
-                      />
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(boardLink);
-                          // Show temporary message for copied link
-                          alert('Link copied to clipboard');
-                        }}
-                        className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-l-0 rounded-r-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        title="Copy to clipboard"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+              </div>
+              
+              {/* Mensaje de error de publicación */}
+              {publishingError && (
+                <div className="p-2 mb-1 text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md">
+                  {publishingError}
+                </div>
+              )}
+              
+              {/* Mensaje de éxito */}
+              <AnimatePresence>
+                {showUrlSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-2 mb-1 text-xs flex items-center text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md"
+                  >
+                    <LucideCheck size={14} className="mr-1.5" />
+                    Board published successfully!
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
               
-              {/* Separador */}
-              <div className="flex items-center my-6">
-                <div className="flex-grow h-px bg-gray-100 dark:bg-gray-800"></div>
-                <span className="mx-3 text-xs text-gray-400 dark:text-gray-500">or</span>
-                <div className="flex-grow h-px bg-gray-100 dark:bg-gray-800"></div>
-              </div>
+              {/* Botón de publicar */}
+              <button
+                onClick={handlePublish}
+                disabled={isChecking || isPublished}
+                className={`w-full py-2 px-4 rounded-md transition-colors ${
+                  isPublished
+                    ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                    : isChecking
+                    ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 cursor-wait"
+                    : "bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
+                }`}
+              >
+                {isPublished ? (
+                  <span className="flex items-center justify-center">
+                    <LucideCheck size={16} className="mr-1.5" />
+                    Published
+                  </span>
+                ) : isChecking ? (
+                  "Checking availability..."
+                ) : (
+                  "Publish board"
+                )}
+              </button>
               
-              {/* Sección de compartir con usuarios */}
-              <div>
-                <div className="flex flex-col mb-2">
-                  <label htmlFor="user-email" className="text-xs text-gray-500 dark:text-gray-400 mb-1.5 flex items-center">
-                    <LucideUsers size={14} className="mr-1.5" /> Share with others
-                  </label>
+              {/* Enlace para compartir */}
+              {isPublished && boardLink && (
+                <div className="mt-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+                    Share this link with others:
+                  </div>
                   <div className="flex">
                     <input
-                      id="user-email"
-                      type="email"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                      className="flex-1 px-3 py-2 text-sm rounded-l-md border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
-                      placeholder="Email or username"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && isValidEmail(userEmail)) {
-                          handleAddUser();
-                        }
-                      }}
+                      type="text"
+                      value={boardLink}
+                      readOnly
+                      className="flex-1 px-3 py-2 text-sm rounded-l-md border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                     />
                     <button
-                      onClick={handleAddUser}
-                      disabled={!isValidEmail(userEmail)}
-                      className={`px-3 py-2 rounded-r-md transition-colors ${
-                        isValidEmail(userEmail)
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                      }`}
+                      onClick={() => {
+                        navigator.clipboard.writeText(boardLink);
+                        // Feedback visual (opcional)
+                        const copyBtn = document.activeElement as HTMLButtonElement;
+                        if (copyBtn) {
+                          const originalText = copyBtn.textContent;
+                          copyBtn.textContent = "Copied!";
+                          setTimeout(() => {
+                            copyBtn.textContent = originalText;
+                          }, 2000);
+                        }
+                      }}
+                      className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-r-md"
                     >
-                      <LucideSend size={16} />
+                      Copy
                     </button>
                   </div>
                 </div>
-                
-                {/* Lista de usuarios compartidos */}
-                <div className="mt-3">
-                  {sharedUsers.length > 0 ? (
-                    <ul className="space-y-1.5">
-                      {sharedUsers.map((user, index) => (
-                        <motion.li
-                          key={user}
-                          className="flex items-center justify-between py-1.5 px-3 rounded-md bg-gray-50 dark:bg-gray-800/50"
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{user}</span>
-                          <button
-                            onClick={() => handleRemoveUser(user)}
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                          >
-                            <LucideX size={14} />
-                          </button>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-center py-3 text-xs text-gray-400 dark:text-gray-500">
-                      You haven&apos;t shared this board with anyone
-                    </p>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
             
             {/* Footer */}
             <div className="border-t border-gray-100 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/40 text-xs text-gray-500 dark:text-gray-400 text-center">
-              Users with access will be able to view but not edit the board
+              Anyone with the link will be able to view the board
             </div>
           </motion.div>
         </motion.div>
