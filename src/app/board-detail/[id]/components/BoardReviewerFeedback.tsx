@@ -196,7 +196,7 @@ const BoardReviewerFeedback: React.FC<BoardReviewerFeedbackProps> = ({ board }) 
           <p>No feedback has been received yet for this board.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {reviewers.map((reviewer) => {
             // Calcular estadísticas de feedback para este revisor
             const positiveReactions = Object.values(reviewer.responses).reduce((total, section) => {
@@ -220,7 +220,7 @@ const BoardReviewerFeedback: React.FC<BoardReviewerFeedbackProps> = ({ board }) 
             return (
               <div 
                 key={reviewer.reviewerId} 
-                className="bg-white border border-gray-100 rounded-xl shadow-sm p-3 relative h-[180px] cursor-pointer transition-all hover:shadow-md"
+                className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 relative h-[185px] cursor-pointer transition-all hover:shadow-md"
                 onClick={() => openPopup(reviewer)}
               >
                 {/* Indicador de actividad (similar al punto verde en BoardsSection) */}

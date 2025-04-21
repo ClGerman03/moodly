@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { User } from 'lucide-react';
 
@@ -18,18 +20,21 @@ interface BoardReviewersProps {
  * y la cantidad total de personas que han revisado el tablero
  */
 const BoardReviewers: React.FC<BoardReviewersProps> = ({ reviewers = [], reviewCount = 0 }) => {
-  // Por ahora, generamos revisores ficticios para la demostración visual
-  const demoReviewers: Reviewer[] = reviewers.length > 0 ? reviewers : [
+  // Si se proporciona reviewCount, lo usamos; de lo contrario, usamos la longitud de reviewers
+  const totalReviewers = reviewCount > 0 ? reviewCount : reviewers.length;
+  
+  // Por ahora, generamos revisores ficticios para la demostración visual solo si no hay reviewers reales
+  const displayReviewers: Reviewer[] = reviewers.length > 0 ? reviewers : [
     { id: '1', avatar: '/avatars/avatar-1.png' },
     { id: '2', avatar: '/avatars/avatar-2.png' },
     { id: '3', avatar: '/avatars/avatar-3.png' },
   ];
 
   // Limitamos a mostrar máximo 3 avatares
-  const visibleReviewers = demoReviewers.slice(0, 3);
+  const visibleReviewers = displayReviewers.slice(0, 3);
   
-  // Calculamos cuántos revisores adicionales hay
-  const additionalReviewers = Math.max(0, (reviewCount || demoReviewers.length) - visibleReviewers.length);
+  // Calculamos cuántos revisores adicionales hay (basados en el totalReviewers real)
+  const additionalReviewers = Math.max(0, totalReviewers - visibleReviewers.length);
   
   // Generar colores distintos para los iconos de usuarios basados en su ID
   const generateBackgroundColor = (userId: string, index: number) => {
@@ -79,7 +84,7 @@ const BoardReviewers: React.FC<BoardReviewersProps> = ({ reviewers = [], reviewC
       </div>
       
       <span className="text-xs text-gray-500">
-        {reviewCount || demoReviewers.length} {(reviewCount || demoReviewers.length) === 1 ? 'reviewer' : 'reviewers'}
+        {totalReviewers} {totalReviewers === 1 ? 'reviewer' : 'reviewers'}
       </span>
     </div>
   );

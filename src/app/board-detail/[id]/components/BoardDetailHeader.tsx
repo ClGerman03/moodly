@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { CalendarDays, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { CalendarDays, Copy, Check, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
@@ -19,14 +19,33 @@ interface BoardDetailHeaderProps {
 interface ActionButtonProps {
   icon: React.ReactNode;
   text: string;
-  href: string;
+  href?: string;
   target?: string;
   primary?: boolean;
+  onClick?: () => void;
 }
 
-const ActionButton: React.FC<ActionButtonProps> = ({ icon, text, href, target, primary = false }) => {
+const ActionButton: React.FC<ActionButtonProps> = ({ icon, text, href, target, primary = false, onClick }) => {
+  if (onClick) {
+    return (
+      <motion.button
+        onClick={onClick}
+        className={`px-3 py-1 md:px-3 md:py-1.5 rounded-full text-sm md:text-sm flex items-center justify-center transition-all duration-300 ${
+          primary
+            ? 'bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600'
+            : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/50'
+        } focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600`}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.97 }}
+      >
+        {icon}
+        <span className="ml-1 md:ml-1.5">{text}</span>
+      </motion.button>
+    );
+  }
+  
   return (
-    <Link href={href} target={target}>
+    <Link href={href || '#'} target={target}>
       <motion.div
         className={`px-3 py-1 md:px-3 md:py-1.5 rounded-full text-sm md:text-sm flex items-center justify-center transition-all duration-300 ${
           primary
@@ -44,9 +63,26 @@ const ActionButton: React.FC<ActionButtonProps> = ({ icon, text, href, target, p
 };
 
 const BoardDetailHeader: React.FC<BoardDetailHeaderProps> = ({ board }) => {
+  const [copied, setCopied] = useState(false);
+  
   // Formato de fechas con función reutilizable
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+  
+  // Función para copiar el enlace del tablero al portapapeles
+  const copyBoardLink = () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const boardUrl = `${baseUrl}/board/${board.id}`;
+    
+    navigator.clipboard.writeText(boardUrl)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Resetear después de 2 segundos
+      })
+      .catch(err => {
+        console.error('Error al copiar el enlace:', err);
+      });
   };
 
   return (
@@ -90,12 +126,20 @@ const BoardDetailHeader: React.FC<BoardDetailHeaderProps> = ({ board }) => {
         
         <div className="flex flex-wrap gap-2">
           <ActionButton
-            icon={<Eye size={12} className="md:w-4 md:h-4" />}
-            text="Preview"
+            icon={<ExternalLink size={12} className="md:w-4 md:h-4" />}
+            text="View Board"
             href={`/board/${board.id}`}
             target="_blank"
             primary
           />
+          
+          {board.isPublished && (
+            <ActionButton
+              icon={copied ? <Check size={12} className="md:w-4 md:h-4" /> : <Copy size={12} className="md:w-4 md:h-4" />}
+              text={copied ? "Copied!" : "Copy Link"}
+              onClick={copyBoardLink}
+            />
+          )}
         </div>
       </div>
     </div>
