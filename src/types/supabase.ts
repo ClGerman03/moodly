@@ -141,6 +141,73 @@ export interface Database {
           last_viewed_section?: number
         }
       }
+      board_reviews: {
+        Row: {
+          id: string
+          board_id: string
+          reviewer_name: string
+          last_viewed_section: number | null
+          completed: boolean | null
+          last_updated: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          board_id: string
+          reviewer_name: string
+          last_viewed_section?: number | null
+          completed?: boolean | null
+          last_updated?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          board_id?: string
+          reviewer_name?: string
+          last_viewed_section?: number | null
+          completed?: boolean | null
+          last_updated?: string | null
+          created_at?: string
+        }
+      }
+      feedback_items: {
+        Row: {
+          id: string
+          board_id: string | null
+          section_id: string
+          reviewer_id: string | null
+          item_id: string
+          reaction: string | null
+          comment: string | null
+          comment_timestamp: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          board_id?: string | null
+          section_id: string
+          reviewer_id?: string | null
+          item_id: string
+          reaction?: string | null
+          comment?: string | null
+          comment_timestamp?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          board_id?: string | null
+          section_id?: string
+          reviewer_id?: string | null
+          item_id?: string
+          reaction?: string | null
+          comment?: string | null
+          comment_timestamp?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never

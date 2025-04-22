@@ -175,21 +175,51 @@ export default function PublicBoard() {
   };
   
   // Manejar la finalización del resumen de feedback para ir a la pantalla de despedida
-  const handleSummaryComplete = () => {
+  const handleSummaryComplete = async () => {
     setViewState("farewell");
+    
+    // Guardar localmente (compatibilidad)
     saveFeedbackProgress();
+    
+    // Si el tablero está en Supabase, guardar también ahí
+    if (dataSource === "supabase" && slug && typeof slug === "string") {
+      try {
+        // Obtener el board por slug para tener su ID
+        const board = await boardService.getBoardBySlug(slug);
+        
+        if (board) {
+          await feedbackService.saveBoardReview(
+            board.id,
+            clientName,
+            feedback,
+            currentSectionIndex
+          );
+          console.log("Feedback guardado en Supabase correctamente");
+        } else {
+          console.error("No se pudo encontrar el tablero en Supabase para guardar el feedback");
+        }
+      } catch (error) {
+        console.error("Error guardando feedback en Supabase:", error);
+        toast.error("Error saving feedback to database", {
+          position: 'bottom-center'
+        });
+      }
+    }
   };
 
   // Manejar la finalización de la experiencia (desde FarewellScreen)
   const handleFinish = () => {
-    // Only show acknowledgment that feedback is complete
-    console.log("Feedback process completed");
-    
     // Notificar al usuario
-    toast.success("Thank you for your feedback!", {
+    toast.success(`Thank you for your feedback, ${clientName}!`, {
       duration: 5000,
-      position: 'bottom-center'
+      position: 'bottom-center',
+      icon: '👏'
     });
+    
+    // Redirigir al inicio después de un tiempo
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 3000);
   };
 
   if (loading) {
