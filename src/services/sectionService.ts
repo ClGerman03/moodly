@@ -32,12 +32,36 @@ export const sectionService = {
     // para evitar conflictos y datos huérfanos
     await this.deleteAllSections(boardId);
     
-    // Procesamos las imágenes y las subimos a Supabase Storage
+    console.log("sectionService: Procesando secciones para guardado:", sections);
+    
+    // Procesamos las imágenes solo para secciones de tipo imageGallery que no hayan sido procesadas
+    // Identificamos si una sección ya fue procesada comprobando si sus datos contienen la estructura esperada
     const sectionsWithProcessedImages = await Promise.all(
-      sections.map(section => storageService.processSectionImages(section, boardId))
+      sections.map(async section => {
+        // Solo procesamos las imágenes para secciones de tipo imageGallery
+        if (section.type === 'imageGallery') {
+          // Comprobamos si la sección ya tiene imágenes procesadas (rutas de Supabase Storage)
+          const isAlreadyProcessed = section.data && 
+                                    section.data.images && 
+                                    Array.isArray(section.data.images) && 
+                                    section.data.images.length > 0 && 
+                                    typeof section.data.images[0] === 'string' && 
+                                    section.data.images[0].includes('storage.googleapis');
+          
+          if (!isAlreadyProcessed) {
+            console.log(`Procesando imágenes para sección ${section.id} (tipo: ${section.type})`);
+            return await storageService.processSectionImages(section, boardId);
+          }
+        }
+        
+        // Para otros tipos de sección o si ya estaban procesadas, devolvemos la sección sin cambios
+        console.log(`Sección ${section.id} (tipo: ${section.type}) no requiere procesamiento de imágenes`);
+        return section;
+      })
     );
     
     // Preparamos las secciones para almacenamiento
+    console.log("sectionService: Preparando secciones para almacenamiento", sectionsWithProcessedImages);
     const preparedSections = prepareForStorage(sectionsWithProcessedImages as unknown as Section[]);
     
     // Convertimos al formato de la tabla
