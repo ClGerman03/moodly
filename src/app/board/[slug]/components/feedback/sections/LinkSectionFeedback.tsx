@@ -6,6 +6,7 @@ import { ExternalLink, ArrowUpRight, ArrowLeft, ArrowRight, Globe } from "lucide
 import { Section } from "@/app/tablero/types";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import FeedbackButtons from "../shared/FeedbackButtons";
+import FeedbackIndicator from "../shared/FeedbackIndicator";
 import CommentSection from "../shared/CommentSection";
 import { cn } from "@/lib/utils";
 
@@ -285,10 +286,20 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center">
-          <h3 className="text-lg font-light text-gray-700 dark:text-gray-300">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
             {activeLink.title}
           </h3>
+
+          {/* Indicador de feedback para el enlace actual */}
+          {(getItemFeedback(activeLink.id) || getItemComments(activeLink.id).length > 0) && (
+            <FeedbackIndicator 
+              type={getItemFeedback(activeLink.id) || 'hasComments'}
+              hasComments={getItemComments(activeLink.id).length > 0}
+              size={16}
+              className="shadow-md"
+            />
+          )}
         </div>
         
         {/* Navegación entre enlaces */}

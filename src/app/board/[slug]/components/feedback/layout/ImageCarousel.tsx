@@ -3,6 +3,7 @@
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback } from "react";
 
 interface ImageCarouselProps {
   images: string[];
@@ -12,6 +13,7 @@ interface ImageCarouselProps {
   onPrevious: () => void;
   onNext: () => void;
   children: (imageUrl: string) => React.ReactNode;
+  isMobile?: boolean;
 }
 
 const ImageCarousel: React.FC<ImageCarouselProps> = ({
@@ -21,8 +23,20 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
   onSwipe,
   onPrevious,
   onNext,
-  children
+  children,
+  isMobile = false
 }) => {
+  // Manejadores explícitos para los eventos de botones
+  const handlePrevious = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPrevious();
+  }, [onPrevious]);
+
+  const handleNext = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onNext();
+  }, [onNext]);
+
   return (
     <div className="relative h-[75vh] w-full overflow-hidden">
       <AnimatePresence initial={false} custom={direction}>
@@ -34,10 +48,12 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -direction * 250 }}
           transition={{ duration: 0.3 }}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.7}
-          onDragEnd={onSwipe}
+          {...(isMobile ? {
+            drag: "x",
+            dragConstraints: { left: 0, right: 0 },
+            dragElastic: 0.7,
+            onDragEnd: onSwipe
+          } : {})}
         >
           <div className="relative w-full h-full overflow-hidden rounded-xl">
             <Image
@@ -50,27 +66,31 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
             />
 
             {/* Controles de navegación */}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 pointer-events-none">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 z-20">
               <motion.button
-                className={`p-2 rounded-full bg-black/50 text-white pointer-events-auto ${
-                  currentIndex === 0 ? "opacity-30" : "opacity-70"
+                className={`p-2 rounded-full bg-black/50 text-white ${
+                  currentIndex === 0 ? "opacity-30 cursor-not-allowed" : "opacity-70 cursor-pointer hover:opacity-100"
                 }`}
                 whileTap={{ scale: 0.9 }}
-                onClick={onPrevious}
+                onClick={handlePrevious}
                 disabled={currentIndex === 0}
                 aria-label="Previous image"
+                // Evitar la propagación para navegación en desktop
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 <ChevronLeft size={16} />
               </motion.button>
 
               <motion.button
-                className={`p-2 rounded-full bg-black/50 text-white pointer-events-auto ${
-                  currentIndex === images.length - 1 ? "opacity-30" : "opacity-70"
+                className={`p-2 rounded-full bg-black/50 text-white ${
+                  currentIndex === images.length - 1 ? "opacity-30 cursor-not-allowed" : "opacity-70 cursor-pointer hover:opacity-100"
                 }`}
                 whileTap={{ scale: 0.9 }}
-                onClick={onNext}
+                onClick={handleNext}
                 disabled={currentIndex === images.length - 1}
                 aria-label="Next image"
+                // Evitar la propagación para navegación en desktop
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 <ChevronRight size={16} />
               </motion.button>

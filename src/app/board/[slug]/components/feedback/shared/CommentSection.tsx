@@ -67,13 +67,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: "auto" }}
         exit={{ opacity: 0, height: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg"
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        className="bg-gray-50/80 dark:bg-gray-800/60 p-4 rounded-xl shadow-sm"
       >
-        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">
+        <h4 className="text-sm font-light text-gray-600 dark:text-gray-300 mb-3">
           {title}
         </h4>
-        <div className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-400 h-24">
+        <div className="w-full p-3 bg-white dark:bg-gray-700/50 border-0 rounded-xl shadow-sm h-24 transition-all duration-200">
           <TextArea 
             value={currentComment}
             onChange={(value) => setCurrentComment(value)}
@@ -81,38 +81,37 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             autoFocus
           />
         </div>
-        <div className="flex justify-end mt-3 gap-2">
+        <div className="flex justify-end mt-6 gap-2">
           <button 
             onClick={onCancelComment}
-            className="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-650"
+            className="px-2.5 py-1 text-xs bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-full transition-colors duration-200"
           >
             Cancelar
           </button>
           <button 
             onClick={onSubmitComment}
             disabled={!currentComment.trim()}
-            className={`px-3 py-1.5 text-sm rounded ${
+            className={`px-2.5 py-1 text-xs rounded-full transition-all duration-200 ${
               currentComment.trim() 
-                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                ? 'bg-black/90 text-white hover:bg-black shadow-sm' 
+                : 'bg-gray-200/80 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }`}
           >
-            Guardar comentario
+            Guardar
           </button>
         </div>
       </motion.div>
       
-      {/* Mostrar comentarios existentes si hay */}
       {existingComments.length > 0 && (
         <div className="mt-4">
-          <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">
+          <h4 className="text-xs font-light text-gray-500 dark:text-gray-400 mb-2">
             Comentarios:
           </h4>
           <div className="space-y-2">
             {existingComments.map((comment, idx) => (
               <div 
                 key={idx}
-                className="p-3 bg-white dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300"
+                className="p-3 bg-white/80 dark:bg-gray-750/30 border-0 shadow-sm rounded-xl text-sm text-gray-600 dark:text-gray-300"
               >
                 {comment.comment}
               </div>

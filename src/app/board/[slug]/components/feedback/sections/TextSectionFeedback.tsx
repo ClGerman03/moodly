@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Section, TextContent, TextSize } from "@/app/tablero/types";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import FeedbackButtons from "../shared/FeedbackButtons";
+import FeedbackIndicator from "../shared/FeedbackIndicator";
 import CommentSection from "../shared/CommentSection";
 
 interface TextSectionFeedbackProps {
@@ -115,16 +116,28 @@ const TextSectionFeedback: React.FC<TextSectionFeedbackProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        {textContent.title && (
-          <motion.h2 
-            className={`${getTitleClass(textContent.size)} text-gray-800 dark:text-gray-100 mb-3`}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            {textContent.title}
-          </motion.h2>
-        )}
+        <div className="flex items-center gap-2 mb-3">
+          {textContent.title && (
+            <motion.h2 
+              className={`${getTitleClass(textContent.size)} text-gray-800 dark:text-gray-100`}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              {textContent.title}
+            </motion.h2>
+          )}
+          
+          {/* Indicador de feedback para el texto */}
+          {(getItemFeedback('text') || getItemComments('text').length > 0) && (
+            <FeedbackIndicator 
+              type={getItemFeedback('text') || 'hasComments'}
+              hasComments={getItemComments('text').length > 0}
+              size={16}
+              className="shadow-md"
+            />
+          )}
+        </div>
         
         {textContent.subtitle && (
           <motion.p 

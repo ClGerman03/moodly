@@ -7,6 +7,7 @@ import ImageFeedbackContainer from "../popups/imagefeedback/ImageFeedbackContain
 import ImageCarousel from "../layout/ImageCarousel";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import FeedbackButtons from "../shared/FeedbackButtons";
+import FeedbackIndicator from "../shared/FeedbackIndicator";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 
 interface BentoImageFeedbackProps {
@@ -108,6 +109,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
             onSwipe={handleSwipe}
             onPrevious={goToPreviousImage}
             onNext={goToNextImage}
+            isMobile={isMobile}
           >
             {(imageUrl: string) => {
               const metadata = imageMetadata[imageUrl] || {};
@@ -128,13 +130,16 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
                       </div>
                     )}
                     
-                    {/* Indicador de feedback activo */}
-                    {reaction && (
-                      <div className={`absolute top-4 right-4 w-4 h-4 rounded-full ${
-                        reaction === 'positive' ? 'bg-green-500' : 
-                        reaction === 'negative' ? 'bg-red-500' : 
-                        'bg-amber-400'
-                      } z-10`}></div>
+                    {/* Indicador de feedback activo animado */}
+                    {(reaction || getItemComments(imageUrl).length > 0) && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <FeedbackIndicator 
+                          type={reaction || 'hasComments'} 
+                          hasComments={getItemComments(imageUrl).length > 0}
+                          size={16} 
+                          className="shadow-lg" 
+                        />
+                      </div>
                     )}
                   </div>
                   

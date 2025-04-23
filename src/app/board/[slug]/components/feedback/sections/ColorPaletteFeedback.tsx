@@ -5,6 +5,7 @@ import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Section } from "@/app/tablero/types";
 import FeedbackButtons from "../shared/FeedbackButtons";
+import FeedbackIndicator from "../shared/FeedbackIndicator";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import CommentSection from "../shared/CommentSection";
 import { cn } from "@/lib/utils";
@@ -210,10 +211,20 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <h3 className="text-lg font-light text-gray-700 dark:text-gray-300">
             {activePalette.name}
           </h3>
+          
+          {/* Indicador de feedback para la paleta actual */}
+          {(getItemFeedback(activePalette.id) || getItemComments(activePalette.id).length > 0) && (
+            <FeedbackIndicator 
+              type={getItemFeedback(activePalette.id) || 'hasComments'}
+              hasComments={getItemComments(activePalette.id).length > 0}
+              size={16}
+              className="shadow-md"
+            />
+          )}
         </div>
         
         {/* Navegación entre paletas */}

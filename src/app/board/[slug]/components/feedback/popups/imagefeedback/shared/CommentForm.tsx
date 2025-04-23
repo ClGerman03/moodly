@@ -43,19 +43,12 @@ const TextArea: React.FC<TextAreaProps> = ({
         onBlur={onBlur}
         placeholder={placeholder}
         className="w-full p-2 bg-transparent text-gray-900 dark:text-gray-100
-                 resize-none border-b border-gray-200 dark:border-gray-700
+                 resize-none outline-none border-0 
                  focus:outline-none focus:ring-0
                  transition-all placeholder-gray-400 dark:placeholder-gray-500"
         rows={3}
         maxLength={maxLength}
       />
-      
-      {/* Solo contador de caracteres */}
-      <div className="flex justify-end items-center mt-1">
-        <span className="text-xs text-gray-400 dark:text-gray-500">
-          {value.length}/{maxLength}
-        </span>
-      </div>
     </div>
   );
 };

@@ -24,6 +24,7 @@ interface ImageGallerySectionProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   isLiveMode?: boolean;
   onReorder?: (newImages: string[]) => void;
+  boardId?: string;
 }
 
 /**
@@ -37,7 +38,8 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   onImageMetadataChange = () => {},
   fileInputRef,
   isLiveMode = false,
-  onReorder = () => {}
+  onReorder = () => {},
+  boardId
 }) => {
   // Device detection (mobile vs desktop)
   const isMobileDevice = useDeviceDetection();
@@ -53,11 +55,13 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   const { 
     handleDropFiles, 
     handleFileInputChange, 
-    triggerFileDialog 
+    triggerFileDialog,
+    isUploading
   } = useImageUpload({ 
     isLiveMode, 
     onImagesAdd, 
-    fileInputRef 
+    fileInputRef,
+    boardId 
   });
   
   // Event handlers for both views
@@ -234,7 +238,20 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
         {/* Button to add more images and hidden file input */}
         {!isLiveMode && (
           <>
-            <AddImageButton onClick={triggerFileDialog} />
+            <AddImageButton 
+              onClick={triggerFileDialog} 
+              disabled={isUploading}
+            />
+            
+            {/* Estado de carga */}
+            {isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-800/30 rounded-xl z-10">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 flex flex-col items-center shadow-lg">
+                  <div className="w-6 h-6 border-2 border-t-gray-600 border-r-gray-600 border-b-gray-200 border-l-gray-200 rounded-full animate-spin mb-2"></div>
+                  <span className="text-xs text-gray-600 dark:text-gray-300">Subiendo imágenes...</span>
+                </div>
+              </div>
+            )}
             
             {/* Invisible input for file selection */}
             <input

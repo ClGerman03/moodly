@@ -22,10 +22,11 @@ import { prepareForStorage, prepareForDisplay } from '@/utils/serialization/sect
 interface SectionManagerProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   initialSections?: Section[];
+  boardId: string; // Agregar la propiedad boardId
 }
 
 const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManagerProps>((
-  { fileInputRef, initialSections = [] }: SectionManagerProps,
+  { fileInputRef, initialSections = [], boardId }: SectionManagerProps, // Agregar boardId a las props
   ref
 ) => {
   const [sections, setSections] = useState<Section[]>([]);
@@ -341,6 +342,7 @@ const SectionManager = forwardRef<{ getSections: () => Section[] }, SectionManag
               onReorder={(reorderedImages: string[]) => handleImagesReorder(section.id, reorderedImages)}
               fileInputRef={fileInputRef}
               isLiveMode={isLiveMode}
+              boardId={boardId} // Pasar el ID del tablero
             />
           </motion.div>
         );

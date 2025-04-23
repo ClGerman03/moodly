@@ -21,6 +21,7 @@ export default function Tablero() {
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [publishedSlug, setPublishedSlug] = useState<string>("");
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
+  const [currentSections, setCurrentSections] = useState<Section[]>([]);
   // Variable utilizada en la función handlePublishBoard
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
@@ -159,6 +160,15 @@ export default function Tablero() {
     }
   };
 
+  // Función para obtener las secciones actuales cuando se abre el popup
+  const handleOpenSharePopup = () => {
+    // Actualizar las secciones actuales desde el sectionManagerRef
+    if (sectionManagerRef.current) {
+      setCurrentSections(sectionManagerRef.current.getSections());
+    }
+    setIsSharePopupOpen(true);
+  };
+
   // Manejar la configuración del nombre del tablero
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,7 +268,7 @@ export default function Tablero() {
                 {boardName}
               </h1>
               <ConfigPanel 
-                onShare={() => setIsSharePopupOpen(true)}
+                onShare={handleOpenSharePopup}
               />
             </div>
             
@@ -266,6 +276,7 @@ export default function Tablero() {
             <SectionManager 
               fileInputRef={fileInputRef}
               ref={sectionManagerRef}
+              boardId={currentBoardId || `temp-${Date.now().toString()}`} // Usar ID actual o generar uno temporal
             />
           </motion.div>
         )}
@@ -276,7 +287,8 @@ export default function Tablero() {
         isOpen={isSharePopupOpen}
         onClose={() => setIsSharePopupOpen(false)}
         boardName={boardName}
-        boardId={publishedSlug || boardName.toLowerCase().replace(/\s+/g, '-')}
+        boardId={currentBoardId || publishedSlug || boardName.toLowerCase().replace(/\s+/g, '-')}
+        currentSections={currentSections}
         onPublish={handlePublishBoard}
       />
     </div>

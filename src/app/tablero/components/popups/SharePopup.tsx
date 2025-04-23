@@ -3,13 +3,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LucideCheck, LucideX } from "lucide-react";
-import { boardService } from "@/services";
+import { boardService, sectionService } from "@/services";
+import { storageService } from "@/services/storageService";
+import { toast } from "react-hot-toast";
+import { Section, ImageMetadata } from "@/app/tablero/types";
+import { supabase } from "@/lib/supabase";
 
 interface SharePopupProps {
   isOpen: boolean;
   onClose: () => void;
   boardName: string;
   boardId?: string;
+  currentSections: Section[]; // Secciones actuales del tablero
   onPublish: (slug: string) => void;
 }
 
@@ -21,6 +26,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
   onClose,
   boardName,
   boardId = "mi-tablero",
+  currentSections = [], // Usar secciones actuales del estado local
   onPublish
 }) => {
   // Estado para la URL personalizada
@@ -125,31 +131,127 @@ const SharePopup: React.FC<SharePopupProps> = ({
         }
       } catch (error) {
         console.error("Error checking slug availability:", error);
-        setPublishingError("Could not verify URL availability. Please try again.");
+        setPublishingError("Error checking URL availability. Please try again.");
         setIsChecking(false);
         return;
       }
       
-      // Llamar a la función de publicación proporcionada como prop
-      onPublish(finalSlug);
+      // Antes de publicar, procesar las imágenes del tablero
+      const migrationToast = toast.loading("Preparing images for publication...");
       
-      // Generar el enlace para compartir
-      const baseUrl = window.location.origin;
-      const shareLink = `${baseUrl}/board/${finalSlug}`;
-      setBoardLink(shareLink);
+      try {
+        // Usar las secciones actuales del estado local en lugar de obtenerlas de la base de datos
+        if (!currentSections || currentSections.length === 0) {
+          toast.dismiss(migrationToast);
+          setIsChecking(false);
+          setPublishingError("No sections found for this board");
+          return;
+        }
+        
+        // Procesar cada sección para migrar las imágenes
+        let hasChanges = false;
+        const processedSections = await Promise.all(
+          currentSections.map(async (section) => {
+            // Solo procesar secciones de tipo imageGallery
+            if (section.type !== 'imageGallery') {
+              return section;
+            }
+            
+            try {
+              // Crear un formato compatible con processSectionImages
+              const sectionToProcess = {
+                type: section.type,
+                data: section.data
+              };
+              
+              // Usar directamente el procesador de imágenes del storageService
+              const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
+              hasChanges = true;
+              
+              // Asegurar que imageMetadata sea del tipo correcto
+              const typedData = { ...processedSection.data };
+              
+              // Convertir los metadatos de imagen al tipo esperado
+              if (typedData.imageMetadata) {
+                const typedMetadata: { [key: string]: ImageMetadata } = {};
+                
+                // Convertir cada entrada de metadatos al tipo ImageMetadata
+                Object.entries(typedData.imageMetadata).forEach(([key, value]) => {
+                  if (value && typeof value === 'object') {
+                    const rawValue = value as Record<string, unknown>;
+                    typedMetadata[key] = {
+                      title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
+                      description: typeof rawValue.description === 'string' ? rawValue.description : undefined
+                    };
+                  }
+                });
+                
+                typedData.imageMetadata = typedMetadata;
+              }
+              
+              return {
+                ...section,
+                data: typedData
+              };
+            } catch (error) {
+              console.error(`Error processing images for section ${section.id}:`, error);
+              // Continuar con otras secciones incluso si esta falla
+              return section;
+            }
+          })
+        );
+        
+        // Declarar finalBoardId fuera del bloque condicional
+        let finalBoardId = boardId;
+        
+        // Guardar las secciones procesadas si hubo cambios
+        if (hasChanges) {
+          // Si el boardId es un valor por defecto, crear el tablero primero
+          if (boardId === "mi-tablero" || !boardId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const newBoard = await boardService.createBoard({
+              name: boardName,
+              slug: finalSlug,
+              user_id: (await supabase.auth.getUser()).data.user?.id || '',
+              is_published: true
+            });
+            finalBoardId = newBoard.id;
+          }
+          
+          // Guardar las secciones con las imágenes procesadas
+          await sectionService.saveSections(finalBoardId, processedSections as Section[]);
+          toast.success("Images prepared and published successfully", { id: migrationToast });
+        } else {
+          toast.success("No images needed preparation", { id: migrationToast });
+        }
+        
+        // Publicar el tablero en Supabase si todavía no se ha hecho
+        if (boardId !== finalBoardId) {
+          await boardService.publishBoard(finalBoardId, finalSlug);
+        }
+        
+        // Generar el enlace completo para compartir
+        const baseUrl = window.location.origin;
+        const fullBoardLink = `${baseUrl}/board/${finalSlug}`;
+        setBoardLink(fullBoardLink);
+        
+        // Actualizar estado y mostrar mensaje de éxito
+        setShowUrlSuccess(true);
+        setIsPublished(true);
+        
+        // Notificar al componente padre
+        onPublish(finalSlug);
+      } catch (error) {
+        console.error("Error preparing images:", error);
+        toast.error(`Error preparing images: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
+        setPublishingError("Error preparing images. Please try again.");
+        setIsChecking(false);
+        return;
+      }
       
-      setIsPublished(true);
-      setShowUrlSuccess(true);
-      setPublishingError(null);
       setIsChecking(false);
-      
-      // Ocultar el mensaje de éxito después de 3 segundos
-      setTimeout(() => {
-        setShowUrlSuccess(false);
-      }, 3000);
     } catch (error) {
-      console.error("Error publishing the board:", error);
-      setPublishingError("An error occurred while publishing the board. Please try again.");
+      console.error("Error publishing board:", error);
+      setPublishingError(`Error publishing board: ${error instanceof Error ? error.message : "Unknown error"}`);
       setIsChecking(false);
     }
   };

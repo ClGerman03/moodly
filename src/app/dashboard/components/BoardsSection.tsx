@@ -124,7 +124,7 @@ export default function BoardsSection() {
             >
               {/* Indicador de estado activo */}
               <div className="absolute top-3 right-3">
-                <div className="relative w-2.5 h-2.5">
+                <div className="relative w-2 h-2">
                   <div className="absolute inset-0 bg-green-300 rounded-full opacity-30"></div>
                   <div className="absolute inset-0.5 bg-green-400 rounded-full opacity-60"></div>
                   <div className="absolute inset-1 bg-green-500 rounded-full"></div>
@@ -132,17 +132,17 @@ export default function BoardsSection() {
               </div>
 
               {/* Título del tablero (alineado a la izquierda) */}
-              <div className="mt-2">
-                <h3 className="text-lg font-medium">{board.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Updated {new Date(board.updatedAt).toLocaleDateString()}
+              <div className="mt-1.5">
+                <h3 className="text-base font-medium">{board.name}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(board.updatedAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}
                 </p>
                 <div className="flex items-center mt-1">
-                  <span className={`text-xs px-2 py-1 rounded-full ${board.isPublished ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${board.isPublished ? 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-600'}`}>
                     {board.isPublished ? 'Published' : 'Draft'}
                   </span>
                   {board.isPublished && (
-                    <span className="text-xs text-gray-500 ml-2">{board.slug}</span>
+                    <span className="text-[10px] text-gray-400 ml-1.5">{board.slug}</span>
                   )}
                 </div>
               </div>
@@ -155,9 +155,9 @@ export default function BoardsSection() {
                 <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                   <Link
                     href={`/board-detail/${board.id}`}
-                    className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                    className="text-[10px] text-gray-600 hover:text-gray-900 flex items-center gap-1"
                   >
-                    <ClipboardList size={14} />
+                    <ClipboardList size={12} />
                     <span>Analytics</span>
                   </Link>
                   
@@ -166,14 +166,14 @@ export default function BoardsSection() {
                       href={`/board/${board.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                      className="text-[10px] text-gray-600 hover:text-gray-900 flex items-center gap-1"
                     >
-                      <Eye size={14} />
+                      <Eye size={12} />
                       <span>View Public</span>
                     </Link>
                   ) : (
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Eye size={14} />
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <Eye size={12} />
                       <span>Not Published</span>
                     </span>
                   )}

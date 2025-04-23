@@ -5,6 +5,7 @@ import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Section, PreviewSize } from "@/app/tablero/types";
 import FeedbackButtons from "../shared/FeedbackButtons";
+import FeedbackIndicator from "../shared/FeedbackIndicator";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import CommentSection from "../shared/CommentSection";
 
@@ -256,10 +257,20 @@ const TypographyFeedback: React.FC<TypographyFeedbackProps> = ({
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <h3 className="text-lg font-light text-gray-700 dark:text-gray-300">
             {activeFont.name}
           </h3>
+          
+          {/* Indicador de feedback para la tipografía actual */}
+          {(getItemFeedback(activeFont.id) || getItemComments(activeFont.id).length > 0) && (
+            <FeedbackIndicator 
+              type={getItemFeedback(activeFont.id) || 'hasComments'}
+              hasComments={getItemComments(activeFont.id).length > 0}
+              size={16}
+              className="shadow-md"
+            />
+          )}
         </div>
         
         {/* Navegación entre tipografías */}
