@@ -3,7 +3,22 @@
 import React from 'react';
 import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import { Section } from "@/app/tablero/types";
-import { SectionFeedback } from '@/lib/feedbackService';
+
+// Definición local de tipos para evitar dependencias en servicios específicos
+interface FeedbackItem {
+  id: string;
+  type: 'positive' | 'negative' | 'neutral';
+  reaction: 'positive' | 'negative' | 'neutral';
+  timestamp: string;
+}
+
+interface SectionFeedback {
+  feedbackItems: Record<string, FeedbackItem>;
+  comments?: { itemId: string; comment: string; timestamp: string }[];
+  paletteFeedbacks?: { paletteId: string; type: 'positive' | 'negative' | 'neutral'; timestamp: string }[];
+  paletteComments?: { paletteId: string; comment: string; timestamp: string }[];
+  imageFeedback?: Record<string, string>;
+}
 
 interface FontOption {
   id: string;

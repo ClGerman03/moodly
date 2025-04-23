@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useParams } from "next/navigation";
+import { FeedbackReactionType } from "@/types/supabase";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import BoardDetailHeader from "./components/BoardDetailHeader";
@@ -10,6 +11,9 @@ import BoardDetailSections from "./components/BoardDetailSections";
 import BoardFeedbackOverview from "./components/BoardFeedbackOverview";
 import BoardReviewerFeedback from "./components/BoardReviewerFeedback";
 import { Section } from "@/app/tablero/types";
+import { boardService } from "@/services/boardService";
+import { feedbackService } from "@/services/feedbackService";
+import { sectionService } from "@/services/sectionService";
 
 interface BoardDetail {
   id: string;
@@ -23,68 +27,142 @@ interface BoardDetail {
   reviewCount?: number;
 }
 
-// Función auxiliar para generar un número pseudoaleatorio determinístico basado en un string
-function generateSeededRandom(seed: string) {
-  // Convierte el string en un número simple
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash = hash & hash; // Convierte a entero de 32 bits
-  }
-  
-  // Genera un número entre 0 y 1 basado en el hash
-  const random = Math.abs(Math.sin(hash) * 10000) % 1;
-  return random;
-}
-
 export default function BoardDetailPage() {
   const { user } = useAuth();
   const params = useParams();
   const boardId = params?.id as string;
   
   const [board, setBoard] = useState<BoardDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackData, setFeedbackData] = useState<{
+    reviewers: {
+      id: string;
+      name: string;
+      lastUpdated: string;
+      completed: boolean;
+      itemCount: number;
+    }[];
+    feedbackStats: {
+      totalReactions: number;
+      positiveReactions: number;
+      negativeReactions: number;
+      neutralReactions: number;
+      totalComments: number;
+      commentsBySection: Record<string, number>;
+    };
+    feedbackItems: Record<string, { itemId: string; section_id: string; reaction: 'positive' | 'negative' | 'neutral'; comments: { text: string; timestamp: string }[] }[]>;
+  } | null>(null);
 
+  // Efecto para cargar los datos del tablero cuando el componente se monte
   useEffect(() => {
-    if (!user || !boardId) return;
+    // Si no hay usuario o no hay ID de tablero, mostrar error
+    if (!user || !boardId) {
+      setError("User not authenticated or board ID not provided");
+      setIsLoading(false);
+      return;
+    }
 
-    // Función para cargar los datos del tablero
-    const loadBoardDetail = () => {
+    // Función para cargar los datos del tablero y su feedback
+    const loadBoardDetail = async () => {
       try {
-        // Simulamos un tiempo de carga para mostrar el indicador
-        setTimeout(() => {
-          // Intentar obtener el tablero desde localStorage
-          const storageKey = `moodly-board-${boardId}`;
-          const boardData = localStorage.getItem(storageKey);
-          
-          if (!boardData) {
-            setError("Board not found");
-            setIsLoading(false);
-            return;
-          }
-          
-          const parsedBoard = JSON.parse(boardData);
-          
-          // Verificar si el tablero pertenece al usuario actual
-          if (parsedBoard.userId !== user.id) {
-            setError("You don't have permission to view this board");
-            setIsLoading(false);
-            return;
-          }
-          
-          // Generar un número consistente de revisores basado en el ID del tablero
-          // Esto asegura que siempre obtengamos el mismo número para el mismo tablero
-          const seededRandom = generateSeededRandom(boardId + '-reviewers');
-          const reviewCount = Math.floor(seededRandom * 10) + 1; // Entre 1 y 10 revisores
-          
-          setBoard({
-            ...parsedBoard,
-            id: boardId,
-            reviewCount: reviewCount
-          });
+        setIsLoading(true);
+        
+        // Obtener datos del tablero desde Supabase
+        const boardData = await boardService.getBoardById(boardId);
+        
+        if (!boardData) {
+          setError("Board not found");
           setIsLoading(false);
-        }, 800); // Simular tiempo de carga
+          return;
+        }
+        
+        // Verificar si el tablero pertenece al usuario actual
+        if (boardData.user_id !== user.id) {
+          setError("You don't have permission to view this board");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Cargar secciones del tablero
+        const sectionsData = await sectionService.getSectionsByBoardId(boardId);
+        
+        // Convertir al formato esperado por los componentes
+        const sections = sectionsData.map(section => ({
+          id: section.section_id,
+          type: section.type as Section['type'],
+          title: section.title || '',
+          description: section.description || '',
+          data: section.data as Section['data'],
+          order: section.order
+        })) as Section[];
+        
+        // Obtener datos de feedback desde Supabase
+        const feedback = await feedbackService.getBoardFeedbackAnalytics(boardId);
+        
+        // Actualizar estado con los datos cargados
+        setBoard({
+          id: boardData.id,
+          name: boardData.name,
+          userId: boardData.user_id,
+          createdAt: boardData.created_at,
+          updatedAt: boardData.updated_at,
+          sections: sections || [],
+          slug: boardData.slug,
+          isPublished: boardData.is_published,
+          reviewCount: feedback.reviewers.length
+        });
+        
+        // Adaptación de los datos que vienen desde Supabase a nuestra estructura interna
+        
+        // Tipo para el estado local (ya definido en useState)
+        type FeedbackData = {
+          reviewers: {
+            id: string;
+            name: string;
+            lastUpdated: string;
+            completed: boolean;
+            itemCount: number;
+          }[];
+          feedbackStats: {
+            totalReactions: number;
+            positiveReactions: number;
+            negativeReactions: number;
+            neutralReactions: number;
+            totalComments: number;
+            commentsBySection: Record<string, number>;
+          };
+          feedbackItems: Record<string, {
+            itemId: string;
+            section_id: string;
+            reaction: FeedbackReactionType;
+            comments: { text: string; timestamp: string }[];
+          }[]>;
+        };
+        
+        // Adaptar los datos de Supabase al formato esperado por el componente
+        const adaptedFeedback: FeedbackData = {
+          reviewers: feedback.reviewers,
+          feedbackStats: feedback.feedbackStats,
+          feedbackItems: Object.fromEntries(
+            Object.entries(feedback.feedbackItems).map(([key, items]) => [
+              key,
+              items.map(item => ({
+                itemId: item.item_id,
+                section_id: item.section_id,
+                reaction: (item.reaction as FeedbackReactionType) || 'neutral',
+                comments: item.comment ? [{ 
+                  text: item.comment, 
+                  timestamp: item.comment_timestamp || item.created_at || new Date().toISOString() 
+                }] : []
+              }))
+            ])
+          )
+        };
+        
+        setFeedbackData(adaptedFeedback);
+        
+        setIsLoading(false);
       } catch (err) {
         console.error("Error loading board:", err);
         setError("Error loading board details");
@@ -147,19 +225,19 @@ export default function BoardDetailPage() {
         </Link>
         
         {board && (
-          <>
-            {/* Encabezado con información general del tablero */}
+          <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl space-y-12">
+            {/* Cabecera con datos generales del tablero */}
             <BoardDetailHeader board={board} />
             
-            {/* Resumen del feedback recibido */}
-            <BoardFeedbackOverview board={board} />
+            {/* Resumen general del feedback recibido */}
+            <BoardFeedbackOverview board={board} feedbackData={feedbackData} />
             
-            {/* Feedback detallado por revisor */}
-            <BoardReviewerFeedback board={board} />
+            {/* Análisis de feedback por sección */}
+            <BoardDetailSections board={board} feedbackData={feedbackData} />
             
-            {/* Secciones del tablero */}
-            <BoardDetailSections board={board} />
-          </>
+            {/* Listado de feedback por revisor */}
+            <BoardReviewerFeedback board={board} feedbackData={feedbackData} />
+          </div>
         )}
       </div>
     </div>

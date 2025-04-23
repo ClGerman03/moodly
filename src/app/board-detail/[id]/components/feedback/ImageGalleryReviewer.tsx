@@ -4,7 +4,7 @@ import React from 'react';
 import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import { Section } from "@/app/tablero/types";
 import Image from 'next/image';
-import { SectionFeedback } from '@/lib/feedbackService';
+import { SectionFeedback } from "@/types/supabase";
 
 interface ImageGalleryReviewerProps {
   section: Section;

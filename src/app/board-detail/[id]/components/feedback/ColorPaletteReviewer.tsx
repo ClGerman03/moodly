@@ -3,7 +3,9 @@
 import React from 'react';
 import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import { Section } from "@/app/tablero/types";
-import { SectionFeedback } from '@/lib/feedbackService';
+
+// Importamos los tipos desde supabase.ts
+import { SectionFeedback } from "@/types/supabase";
 
 // Definimos la interfaz para las paletas de colores 
 interface ColorPalette {
@@ -27,19 +29,39 @@ const ColorPaletteReviewer: React.FC<ColorPaletteReviewerProps> = ({
   // Get all palettes from section data
   const palettes = (section.data?.palettes || []) as ColorPalette[];
   
-  // Process palette feedback if available
-  const palettesWithFeedback = sectionData.paletteFeedbacks ? 
-    sectionData.paletteFeedbacks.map(feedback => feedback.paletteId) : [];
+  // Logs para depuración
+  console.log('ColorPaletteReviewer: Datos recibidos:', { section, sectionData });
   
-  // Group comments by palette
+  // ADAPTACIÓN A NUEVA ESTRUCTURA DE DATOS
+  // Extraer feedback de items (para reacciones)
+  const feedbackItems = sectionData.feedbackItems || {};
+  
+  // Procesar todos los items que comienzan con 'palette-' para extraer reacciones
+  const palettesWithFeedback: string[] = [];
+  const paletteReactions: Record<string, string> = {};
+  
+  // Procesar las reacciones desde feedbackItems
+  Object.entries(feedbackItems).forEach(([itemId, item]) => {
+    if (itemId.startsWith('palette-') || itemId === 'default') {
+      const paletteId = itemId;
+      palettesWithFeedback.push(paletteId);
+      if (item && item.reaction) {
+        paletteReactions[paletteId] = item.reaction;
+      }
+    }
+  });
+  
+  // Group comments by palette - adaptado a la nueva estructura
   const commentsByPalette: Record<string, { comment: string, timestamp: string }[]> = {};
   
-  if (sectionData.paletteComments) {
-    sectionData.paletteComments.forEach(comment => {
-      if (!commentsByPalette[comment.paletteId]) {
-        commentsByPalette[comment.paletteId] = [];
+  // Procesar comentarios desde la estructura comments
+  if (sectionData.comments && sectionData.comments.length > 0) {
+    sectionData.comments.forEach(comment => {
+      const paletteId = comment.itemId;
+      if (!commentsByPalette[paletteId]) {
+        commentsByPalette[paletteId] = [];
       }
-      commentsByPalette[comment.paletteId].push({
+      commentsByPalette[paletteId].push({
         comment: comment.comment,
         timestamp: comment.timestamp
       });
@@ -54,15 +76,32 @@ const ColorPaletteReviewer: React.FC<ColorPaletteReviewerProps> = ({
     ])
   );
   
+  console.log('ColorPaletteReviewer: Paletas con feedback y comentarios:', {
+    palettesWithFeedback,
+    paletteReactions,
+    commentsByPalette,
+    allFeedbackPalettes
+  });
+  
   // Helper to get palette by ID
   const getPalette = (paletteId: string): ColorPalette | undefined => {
     return palettes.find(p => p.id === paletteId);
   };
   
-  // Get reaction type for a palette
+  // Get reaction type for a palette - adaptado a nueva estructura
   const getReactionType = (paletteId: string) => {
-    const feedback = sectionData.paletteFeedbacks?.find(f => f.paletteId === paletteId);
-    return feedback?.type || 'neutral';
+    // Primero intentamos buscar en paletteReactions
+    if (paletteReactions[paletteId]) {
+      return paletteReactions[paletteId];
+    }
+    
+    // Si no hay reacción pero hay comentarios, devolver 'neutral'
+    if (commentsByPalette[paletteId] && commentsByPalette[paletteId].length > 0) {
+      return 'neutral';
+    }
+    
+    // Por defecto devolver 'neutral'
+    return 'neutral';
   };
   
   // Format date for display

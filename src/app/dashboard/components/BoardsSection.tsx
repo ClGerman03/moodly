@@ -9,9 +9,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Loader2, ClipboardList, Eye, ExternalLink } from 'lucide-react'
+import { Plus, Loader2, ClipboardList, Eye } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import BoardReviewers from './BoardReviewers'
+import { boardService } from '@/services'
 
 // Tipo para la estructura de un tablero
 interface BoardItem {
@@ -19,9 +20,11 @@ interface BoardItem {
   name: string
   updatedAt: string
   createdAt: string
-  isActive?: boolean // Nuevo campo para indicar si el tablero está activo
-  reviewers?: {id: string, avatar?: string, name?: string}[] // Nuevo campo para los revisores
-  reviewCount?: number // Nuevo campo para la cantidad de revisores
+  slug: string
+  isPublished: boolean
+  isActive?: boolean // Campo para indicar si el tablero está activo
+  reviewers?: {id: string, avatar?: string, name?: string}[] // Campo para los revisores
+  reviewCount?: number // Campo para la cantidad de revisores
 }
 
 export default function BoardsSection() {
@@ -29,44 +32,38 @@ export default function BoardsSection() {
   const [boards, setBoards] = useState<BoardItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Función para cargar los tableros del usuario desde localStorage
-  const loadBoards = () => {
+  // Función para cargar los tableros del usuario desde Supabase
+  const loadBoards = async () => {
     try {
-      console.log('Cargando tableros desde localStorage...');
-      // Obtener todas las claves de localStorage
-      const keys = Object.keys(localStorage);
+      if (!user || !user.id) {
+        console.log('No hay usuario disponible para cargar tableros');
+        return;
+      }
       
-      // Filtrar solo las claves de tableros (formato: moodly-board-*)
-      const boardKeys = keys.filter(key => key.startsWith('moodly-board-'));
-      console.log(`Se encontraron ${boardKeys.length} claves de tableros en total`);
+      console.log('Cargando tableros desde Supabase...');
       
-      // Extraer los datos de los tableros
-      const userBoards: BoardItem[] = [];
+      // Obtener los tableros del usuario desde Supabase
+      const supabaseBoards = await boardService.getBoardsByUser(user.id);
+      console.log(`Se encontraron ${supabaseBoards.length} tableros en Supabase`);
       
-      boardKeys.forEach(key => {
-        try {
-          const data = JSON.parse(localStorage.getItem(key) || '{}');
-          
-          // Solo incluir los tableros del usuario actual
-          if (data.userId && user && data.userId === user.id) {
-            // Simulamos datos de revisores para la demo
-            const demoReviewCount = Math.floor(Math.random() * 5) + 1; // Entre 1 y 5 revisores
-            
-            userBoards.push({
-              id: key.replace('moodly-board-', ''),
-              name: data.name || 'Tablero sin nombre',
-              updatedAt: data.updatedAt || data.createdAt,
-              createdAt: data.createdAt,
-              isActive: true, // Por defecto consideramos todos activos
-              reviewCount: demoReviewCount // Agregamos datos de demo para revisores
-            });
-          }
-        } catch (error) {
-          console.error('Error al parsear tablero:', key, error);
-        }
+      // Transformar a nuestra estructura de BoardItem
+      const userBoards: BoardItem[] = supabaseBoards.map(board => {
+        // Simulamos datos de revisores para la demo
+        const demoReviewCount = Math.floor(Math.random() * 5) + 1; // Entre 1 y 5 revisores
+        
+        return {
+          id: board.id,
+          name: board.name,
+          updatedAt: board.updated_at,
+          createdAt: board.created_at,
+          slug: board.slug,
+          isPublished: board.is_published,
+          isActive: board.is_published, // Consideramos activos los publicados
+          reviewCount: demoReviewCount // Datos de demo para revisores
+        };
       });
       
-      console.log(`Se cargaron ${userBoards.length} tableros para el usuario ${user?.id}`);
+      console.log(`Se procesaron ${userBoards.length} tableros para el usuario ${user.id}`);
       
       // Ordenar tableros por fecha de actualización (más reciente primero)
       userBoards.sort((a, b) => 
@@ -99,7 +96,7 @@ export default function BoardsSection() {
     
     return () => clearTimeout(loadTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user])
 
   return (
     <div className="mt-8">
@@ -136,12 +133,18 @@ export default function BoardsSection() {
 
               {/* Título del tablero (alineado a la izquierda) */}
               <div className="mt-2">
-                <h3 className="font-medium text-gray-800 mb-1 line-clamp-2 text-sm">
-                  {board.name}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  {new Date(board.updatedAt).toLocaleDateString()}
+                <h3 className="text-lg font-medium">{board.name}</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Updated {new Date(board.updatedAt).toLocaleDateString()}
                 </p>
+                <div className="flex items-center mt-1">
+                  <span className={`text-xs px-2 py-1 rounded-full ${board.isPublished ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    {board.isPublished ? 'Published' : 'Draft'}
+                  </span>
+                  {board.isPublished && (
+                    <span className="text-xs text-gray-500 ml-2">{board.slug}</span>
+                  )}
+                </div>
               </div>
 
               {/* Componente de revisores */}
@@ -154,19 +157,26 @@ export default function BoardsSection() {
                     href={`/board-detail/${board.id}`}
                     className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
                   >
-                    <Eye size={14} />
-                    <span>Open</span>
+                    <ClipboardList size={14} />
+                    <span>Analytics</span>
                   </Link>
                   
-                  <Link
-                    href={`/board/${board.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
-                  >
-                    <ExternalLink size={14} />
-                    <span>View</span>
-                  </Link>
+                  {board.isPublished ? (
+                    <Link
+                      href={`/board/${board.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                    >
+                      <Eye size={14} />
+                      <span>View Public</span>
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Eye size={14} />
+                      <span>Not Published</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

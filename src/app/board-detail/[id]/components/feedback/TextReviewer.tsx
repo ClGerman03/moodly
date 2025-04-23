@@ -3,7 +3,7 @@
 import React from 'react';
 import { MessageSquare, ThumbsUp, ThumbsDown, FileText } from "lucide-react";
 import { Section } from "@/app/tablero/types";
-import { SectionFeedback } from '@/lib/feedbackService';
+import { SectionFeedback } from "@/types/supabase";
 
 interface TextReviewerProps {
   section: Section;

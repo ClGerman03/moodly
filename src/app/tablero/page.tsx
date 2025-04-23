@@ -21,6 +21,8 @@ export default function Tablero() {
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [publishedSlug, setPublishedSlug] = useState<string>("");
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
+  // Variable utilizada en la función handlePublishBoard
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sectionManagerRef = useRef<{ getSections: () => Section[] }>(null);

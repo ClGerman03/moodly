@@ -2,8 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, ThumbsUp, ThumbsDown, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react';
-import { ReviewerFeedback, SectionFeedback } from '@/lib/feedbackService';
-import { Section } from '@/app/tablero/types';
+// Importamos los tipos necesarios desde módulos compartidos
+import { Section } from "@/app/tablero/types";
+import { SectionFeedback } from "@/types/supabase";
+
+// Removimos la definición del tipo LocalFeedbackType ya que no se utiliza
+
+// Exportamos el tipo para que sea accesible desde otros componentes
+export interface ReviewerFeedback {
+  reviewerId: string;
+  reviewerName: string;
+  reviewerAvatar: string;
+  lastUpdated: string;
+  responses: Record<string, SectionFeedback>;
+}
+
+// Removimos la función convertToSupabaseFeedback ya que no se usa en el código
 
 // Import specialized feedback components
 import ImageGalleryReviewer from '@/app/board-detail/[id]/components/feedback/ImageGalleryReviewer';

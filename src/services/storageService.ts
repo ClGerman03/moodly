@@ -68,7 +68,7 @@ export const storageService = {
       const fileName = `${boardId}/${uuidv4()}${fileExtension}`;
       
       // Subir el archivo a Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from(BOARDS_BUCKET)
         .upload(fileName, blob, {
           cacheControl: '3600',
@@ -96,7 +96,7 @@ export const storageService = {
    * @param boardId - ID del tablero al que pertenece la sección
    * @returns La sección con las URLs de imágenes actualizadas
    */
-  async processSectionImages(section: any, boardId: string): Promise<any> {
+  async processSectionImages(section: { type?: string; data?: { images?: string[]; imageMetadata?: Record<string, unknown> } }, boardId: string): Promise<typeof section> {
     // Si no es una sección de tipo imageGallery, no hay que procesar
     if (!section || section.type !== 'imageGallery' || !section.data?.images) {
       return section;

@@ -3,8 +3,8 @@
 import React from 'react';
 import { ThumbsUp, ThumbsDown, MessageSquare, ExternalLink, Globe } from "lucide-react";
 import { Section } from "@/app/tablero/types";
-import { SectionFeedback } from '@/lib/feedbackService';
 import { cn } from "@/lib/utils";
+import { SectionFeedback } from "@/types/supabase";
 
 interface Link {
   id: string;

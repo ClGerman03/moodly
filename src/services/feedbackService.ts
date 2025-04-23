@@ -165,8 +165,25 @@ export const feedbackService = {
         for (const itemId in feedbackItems) {
           const item = feedbackItems[itemId];
           
-          // Guardar la reacción
-          if (item.reaction) {
+          // Si hay comentarios, crear un registro para cada comentario
+          // y asignar la reacción al primer comentario (si existe)
+          if (item.comments && item.comments.length > 0) {
+            for (let i = 0; i < item.comments.length; i++) {
+              const comment = item.comments[i];
+              items.push({
+                board_id: boardId,
+                section_id: sectionId,
+                reviewer_id: reviewerId,
+                item_id: itemId,
+                // Asignar la reacción solo al primer comentario
+                reaction: i === 0 && item.reaction ? item.reaction : null,
+                comment: comment.text,
+                comment_timestamp: comment.timestamp,
+              });
+            }
+          } 
+          // Si no hay comentarios pero hay reacción, crear un registro solo para la reacción
+          else if (item.reaction) {
             items.push({
               board_id: boardId,
               section_id: sectionId,
@@ -176,23 +193,9 @@ export const feedbackService = {
               comment: null,
             });
           }
-          
-          // Guardar comentarios
-          if (item.comments && item.comments.length > 0) {
-            for (const comment of item.comments) {
-              items.push({
-                board_id: boardId,
-                section_id: sectionId,
-                reviewer_id: reviewerId,
-                item_id: itemId,
-                reaction: null,
-                comment: comment.text,
-                comment_timestamp: comment.timestamp,
-              });
-            }
-          }
         }
       }
+      
       
       // Procesar paletas de colores
       if (sectionFeedback.paletteFeedbacks) {
@@ -277,10 +280,14 @@ export const feedbackService = {
       return [];
     }
     
-    // Guardar todos los elementos de feedback
+    // Eliminar duplicados para evitar el error "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const uniqueItems = this.removeDuplicateFeedbackItems(items);
+    
+    // Guardar todos los elementos de feedback usando upsert para actualizar registros existentes
+    // Esto resuelve el error de clave duplicada utilizando la restricción única definida en la tabla
     const { data, error } = await supabase
       .from('feedback_items')
-      .insert(items)
+      .upsert(uniqueItems, { onConflict: 'board_id,section_id,reviewer_id,item_id' })
       .select();
     
     if (error) throw new Error(`Error saving feedback items: ${error.message}`);
@@ -342,6 +349,46 @@ export const feedbackService = {
   },
   
   /**
+   * Elimina elementos duplicados del array de feedback items
+   * @param items - Array de elementos de feedback
+   * @returns Array sin elementos duplicados
+   */
+  removeDuplicateFeedbackItems(items: InsertFeedbackItem[]): InsertFeedbackItem[] {
+    // Usamos un Map para rastrear elementos únicos usando una clave compuesta
+    const uniqueMap = new Map<string, InsertFeedbackItem>();
+    
+    for (const item of items) {
+      // Crear una clave única basada en los campos que componen la restricción
+      const key = `${item.board_id}|${item.section_id}|${item.reviewer_id}|${item.item_id}`;
+      
+      // Si ya existe un elemento con esta clave
+      if (uniqueMap.has(key)) {
+        const existingItem = uniqueMap.get(key)!;
+        
+        // Preservar la reacción si existe en cualquiera de los dos registros
+        // Priorizar la reacción del elemento actual si ambos tienen reacción
+        if (item.reaction) {
+          existingItem.reaction = item.reaction;
+        }
+        
+        // Preservar el comentario si existe en cualquiera de los dos registros
+        // Si el elemento actual tiene comentario, usarlo en lugar del existente
+        if (item.comment) {
+          existingItem.comment = item.comment;
+          existingItem.comment_timestamp = item.comment_timestamp;
+        }
+        
+        uniqueMap.set(key, existingItem);
+      } else {
+        uniqueMap.set(key, item);
+      }
+    }
+    
+    // Convertir el Map de vuelta a un array
+    return Array.from(uniqueMap.values());
+  },
+  
+  /**
    * Migra el feedback de localStorage a Supabase
    * @param slug - Slug del tablero
    * @param boardId - ID del tablero en Supabase
@@ -377,5 +424,168 @@ export const feedbackService = {
     }
     
     return null;
+  },
+
+  /**
+   * Obtiene todas las revisiones (board_reviews) de un tablero
+   * @param boardId - ID del tablero
+   * @returns Lista de revisiones
+   */
+  async getBoardReviews(boardId: string): Promise<BoardReview[]> {
+    try {
+      const { data, error } = await supabase
+        .from('board_reviews')
+        .select()
+        .eq('board_id', boardId);
+      
+      if (error) throw new Error(`Error getting board reviews: ${error.message}`);
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error getting board reviews:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Obtiene los elementos de feedback para un tablero, agrupados por revisor
+   * @param boardId - ID del tablero
+   * @returns Datos de feedback agrupados por revisor con estadísticas
+   */
+  async getBoardFeedbackAnalytics(boardId: string): Promise<{
+    reviewers: {
+      id: string;
+      name: string;
+      lastUpdated: string;
+      completed: boolean;
+      itemCount: number;
+    }[];
+    feedbackStats: {
+      totalReactions: number;
+      positiveReactions: number;
+      negativeReactions: number;
+      neutralReactions: number;
+      totalComments: number;
+      commentsBySection: Record<string, number>;
+    };
+    feedbackItems: Record<string, FeedbackItem[]>;
+  }> {
+    try {
+      // 1. Obtener todas las revisiones del tablero
+      const reviews = await this.getBoardReviews(boardId);
+      
+      // 2. Obtener todos los elementos de feedback para este tablero
+      const { data: feedbackItems, error } = await supabase
+        .from('feedback_items')
+        .select()
+        .eq('board_id', boardId);
+      
+      if (error) throw new Error(`Error getting feedback items: ${error.message}`);
+      
+      // 3. Preparar estructura de datos
+      const reviewersData = reviews.map(review => ({
+        id: review.id,
+        name: review.reviewer_name,
+        lastUpdated: review.last_updated || review.created_at,
+        completed: review.completed || false,
+        itemCount: 0
+      }));
+      
+      // 4. Agrupar items por revisor
+      const itemsByReviewer: Record<string, FeedbackItem[]> = {};
+      const stats = {
+        totalReactions: 0,
+        positiveReactions: 0,
+        negativeReactions: 0,
+        neutralReactions: 0,
+        totalComments: 0,
+        commentsBySection: {} as Record<string, number>
+      };
+      
+      // Procesar todos los items de feedback
+      if (feedbackItems) {
+        for (const item of feedbackItems) {
+          // Agregar al contador del revisor correspondiente
+          const reviewerIndex = reviewersData.findIndex(r => r.id === item.reviewer_id);
+          if (reviewerIndex !== -1) {
+            reviewersData[reviewerIndex].itemCount++;
+          }
+          
+          // Agrupar por revisor
+          if (!itemsByReviewer[item.reviewer_id || '']) {
+            itemsByReviewer[item.reviewer_id || ''] = [];
+          }
+          itemsByReviewer[item.reviewer_id || ''].push(item);
+          
+          // Actualizar estadísticas generales
+          if (item.reaction) {
+            stats.totalReactions++;
+            if (item.reaction === 'positive') stats.positiveReactions++;
+            else if (item.reaction === 'negative') stats.negativeReactions++;
+            else stats.neutralReactions++;
+          }
+          
+          if (item.comment) {
+            stats.totalComments++;
+            
+            // Contar comentarios por sección
+            if (!stats.commentsBySection[item.section_id]) {
+              stats.commentsBySection[item.section_id] = 0;
+            }
+            stats.commentsBySection[item.section_id]++;
+          }
+        }
+      }
+      
+      // 5. Devolver datos estructurados
+      return {
+        reviewers: reviewersData,
+        feedbackStats: stats,
+        feedbackItems: itemsByReviewer
+      };
+      
+    } catch (error) {
+      console.error('Error getting board feedback analytics:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Obtiene todos los detalles de feedback de un revisor específico
+   * @param reviewerId - ID del revisor
+   * @returns Detalles completos del feedback del revisor
+   */
+  async getReviewerFeedbackDetails(reviewerId: string): Promise<{
+    reviewer: BoardReview;
+    feedbackItems: FeedbackItem[];
+  }> {
+    try {
+      // 1. Obtener datos del revisor
+      const { data: reviewer, error: reviewerError } = await supabase
+        .from('board_reviews')
+        .select()
+        .eq('id', reviewerId)
+        .single();
+      
+      if (reviewerError) throw new Error(`Error getting reviewer details: ${reviewerError.message}`);
+      if (!reviewer) throw new Error(`Reviewer not found with id: ${reviewerId}`);
+      
+      // 2. Obtener items de feedback del revisor
+      const { data: feedbackItems, error: itemsError } = await supabase
+        .from('feedback_items')
+        .select()
+        .eq('reviewer_id', reviewerId);
+      
+      if (itemsError) throw new Error(`Error getting reviewer feedback items: ${itemsError.message}`);
+      
+      return {
+        reviewer,
+        feedbackItems: feedbackItems || []
+      };
+      
+    } catch (error) {
+      console.error('Error getting reviewer feedback details:', error);
+      throw error;
+    }
   }
 };

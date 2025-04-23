@@ -13,6 +13,44 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/**
+ * Tipos comunes para componentes de feedback
+ */
+export type FeedbackReactionType = 'positive' | 'negative' | 'neutral';
+
+export interface FeedbackItem {
+  id: string;
+  type: FeedbackReactionType;
+  reaction: FeedbackReactionType;
+  timestamp: string;
+}
+
+export interface FeedbackComment {
+  itemId: string;
+  comment: string;
+  timestamp: string;
+}
+
+export interface PaletteFeedback {
+  paletteId: string;
+  type: FeedbackReactionType;
+  timestamp: string;
+}
+
+export interface PaletteComment {
+  paletteId: string;
+  comment: string;
+  timestamp: string;
+}
+
+export interface SectionFeedback {
+  feedbackItems: Record<string, FeedbackItem>;
+  comments?: FeedbackComment[];
+  paletteFeedbacks?: PaletteFeedback[];
+  paletteComments?: PaletteComment[];
+  imageFeedback?: Record<string, string>;
+}
+
 export interface Database {
   public: {
     Tables: {

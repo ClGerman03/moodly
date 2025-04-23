@@ -5,11 +5,11 @@
  * al formato esperado por los componentes de la aplicación, y viceversa.
  */
 
-import { Section } from "@/app/tablero/types";
+import { Section, SectionType } from "@/app/tablero/types";
 import { BoardSection } from "@/services/sectionService";
 import { Board } from "@/services/boardService";
 import { prepareForDisplay } from "@/utils/serialization/sectionAdapters";
-import { storageService } from "@/services/storageService";
+// import { storageService } from "@/services/storageService"; // No se utiliza en este archivo
 
 /**
  * Interfaz para la estructura esperada por los componentes de visualización
@@ -42,10 +42,10 @@ export function adaptBoardForDisplay(board: Board, sections: BoardSection[]): Di
     // Crear una copia básica de la sección
     const displaySection: Section = {
       id: section.section_id,
-      type: section.type as any, // Conversión segura ya que validamos los tipos en Supabase
+      type: section.type as SectionType, // Conversión segura ya que validamos los tipos en Supabase
       title: section.title || "",
       description: section.description || undefined,
-      data: section.data as any || {}
+      data: section.data as Section['data'] || {}
     };
     
     // Procesar las imágenes si es una sección de tipo imageGallery
@@ -83,22 +83,51 @@ export function adaptBoardForDisplay(board: Board, sections: BoardSection[]): Di
  * @param localData - Datos del tablero desde localStorage (ya parseados)
  * @returns El tablero en el formato esperado por los componentes
  */
-export function adaptLocalStorageBoardForDisplay(localData: any): DisplayBoard | null {
-  if (!localData || typeof localData !== 'object' || !localData.name || !Array.isArray(localData.sections)) {
+// Definición simplificada para los datos de localStorage
+interface LocalStorageBoard {
+  name: string;
+  sections: unknown[];
+  createdAt?: string;
+  updatedAt?: string;
+  isPublished?: boolean;
+  userId?: string;
+}
+
+export function adaptLocalStorageBoardForDisplay(localData: unknown): DisplayBoard | null {
+  if (!localData || typeof localData !== 'object' || !('name' in localData) || !('sections' in localData) || !Array.isArray((localData as {sections?: unknown[]}).sections)) {
     return null;
   }
+  
+  const typedData = localData as LocalStorageBoard;
 
   // Procesar todas las secciones para manejar correctamente las imágenes
-  const sectionsWithValidatedImages = localData.sections.map((section: any) => {
+  // Importamos el tipo Section desde donde esté definido pero hacemos una versión más amplia
+  // para poder manejar datos que podrían no cumplir exactamente con la estructura requerida
+  interface StorageSection {
+    id: string;
+    type: SectionType;
+    title: string;
+    description?: string;
+    data?: {
+      images?: string[];
+      imageMetadata?: Record<string, unknown>;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  }
+
+  const sectionsWithValidatedImages = typedData.sections.map((section: unknown) => {
+    // Hacemos una validación de tipo en runtime
+    const typedSection = section as StorageSection;
     // Crear una copia de la sección
-    const processedSection = { ...section };
+    const processedSection = { ...typedSection } as StorageSection;
     
     // Procesar las imágenes si es una sección de tipo imageGallery
-    if (section.type === 'imageGallery' && section.data?.images) {
-      processedSection.data = { ...section.data };
+    if (typedSection.type === 'imageGallery' && typedSection.data?.images) {
+      processedSection.data = { ...typedSection.data };
       
       // Verificar si las URLs de blob siguen siendo válidas
-      processedSection.data.images = section.data.images.map((imageUrl: string) => {
+      processedSection.data.images = typedSection.data.images.map((imageUrl: string) => {
         // Para URLs de tipo blob, intentamos validar que aún existan
         if (imageUrl.startsWith('blob:')) {
           try {
@@ -127,14 +156,23 @@ export function adaptLocalStorageBoardForDisplay(localData: any): DisplayBoard |
   });
   
   // Procesar las secciones
-  const processedSections = prepareForDisplay(sectionsWithValidatedImages);
+  // Convertimos explícitamente al tipo Section
+  const processedSections = prepareForDisplay(sectionsWithValidatedImages.map(section => {
+    return {
+      id: section.id,
+      type: section.type,
+      title: section.title,
+      description: section.description,
+      data: section.data as Section['data']
+    } as Section;
+  }));
 
   return {
-    name: localData.name,
+    name: typedData.name,
     sections: processedSections,
-    createdAt: localData.createdAt,
-    updatedAt: localData.updatedAt,
-    isPublished: localData.isPublished,
-    userId: localData.userId
+    createdAt: typedData.createdAt,
+    updatedAt: typedData.updatedAt,
+    isPublished: typedData.isPublished,
+    userId: typedData.userId
   };
 }

@@ -9,6 +9,7 @@ import { storageService } from "@/services/storageService";
 import { boardService } from "@/services/boardService";
 import { sectionService } from "@/services/sectionService";
 import { toast } from "react-hot-toast";
+import { SectionType } from "@/app/tablero/types";
 
 /**
  * Migra todas las imágenes de un tablero desde blob URLs a Supabase Storage
@@ -41,16 +42,26 @@ export async function migrateImagesForBoard(slug: string): Promise<boolean> {
     // 3. Procesar cada sección y migrar las imágenes
     let hasChanges = false;
     const updatedSections = await Promise.all(sections.map(async (section) => {
-      if (section.type !== 'imageGallery' || !section.data?.images) {
+      const sectionData = section.data as { images?: string[], imageMetadata?: Record<string, unknown> } | undefined;
+      if (section.type !== 'imageGallery' || !sectionData?.images) {
         return section;
       }
       
-      const originalImages = section.data.images as string[];
-      const imageMetadata = section.data.imageMetadata || {};
+      const originalImages = sectionData.images as string[];
+      const imageMetadata = sectionData.imageMetadata || {};
       
       // Procesar cada imagen
       const updatedImages: string[] = [];
-      const updatedMetadata: Record<string, any> = {};
+      // Definimos un tipo para los metadatos de imágenes
+      interface ImageMetadata {
+        width?: number;
+        height?: number;
+        alt?: string;
+        caption?: string;
+        [key: string]: unknown;
+      }
+      
+      const updatedMetadata: Record<string, ImageMetadata> = {};
       
       for (const imageUrl of originalImages) {
         if (imageUrl.startsWith('blob:')) {
@@ -62,7 +73,7 @@ export async function migrateImagesForBoard(slug: string): Promise<boolean> {
             
             // Migrar los metadatos si existen
             if (imageMetadata[imageUrl]) {
-              updatedMetadata[newUrl] = imageMetadata[imageUrl];
+              updatedMetadata[newUrl] = imageMetadata[imageUrl] as ImageMetadata;
             }
             
             hasChanges = true;
@@ -70,14 +81,14 @@ export async function migrateImagesForBoard(slug: string): Promise<boolean> {
             // Si falló la migración, mantener la URL original
             updatedImages.push(imageUrl);
             if (imageMetadata[imageUrl]) {
-              updatedMetadata[imageUrl] = imageMetadata[imageUrl];
+              updatedMetadata[imageUrl] = imageMetadata[imageUrl] as ImageMetadata;
             }
           }
         } else {
           // No es una URL de blob, mantenerla igual
           updatedImages.push(imageUrl);
           if (imageMetadata[imageUrl]) {
-            updatedMetadata[imageUrl] = imageMetadata[imageUrl];
+            updatedMetadata[imageUrl] = imageMetadata[imageUrl] as ImageMetadata;
           }
         }
       }
@@ -85,7 +96,7 @@ export async function migrateImagesForBoard(slug: string): Promise<boolean> {
       // Si hubo cambios, actualizar la sección
       if (hasChanges) {
         const updatedData = {
-          ...section.data,
+          ...(section.data as object || {}),
           images: updatedImages,
           imageMetadata: updatedMetadata
         };
@@ -105,13 +116,22 @@ export async function migrateImagesForBoard(slug: string): Promise<boolean> {
       // Convertir las secciones actualizadas al formato de la aplicación para guardarlas
       const sectionsForSaving = updatedSections.map(section => ({
         id: section.section_id,
-        type: section.type,
+        type: section.type as SectionType,
         title: section.title || "",
         description: section.description || undefined,
         data: section.data
       }));
       
-      await sectionService.saveSections(board.id, sectionsForSaving as any);
+      // Definimos la estructura mínima esperada por saveSections
+      interface SectionToSave {
+        id: string;
+        type: SectionType;
+        title: string;
+        description?: string;
+        data?: Record<string, unknown>;
+      }
+      
+      await sectionService.saveSections(board.id, sectionsForSaving as SectionToSave[]);
       
       toast.success("Images migrated successfully", { id: migrationToast });
       return true;

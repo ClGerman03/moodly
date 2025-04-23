@@ -5,6 +5,7 @@
  * secciones de tableros en la base de datos Supabase.
  */
 
+import { Json } from "@/types/supabase";
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/supabase';
 import { Section } from '@/app/tablero/types';
@@ -37,16 +38,18 @@ export const sectionService = {
     );
     
     // Preparamos las secciones para almacenamiento
-    const preparedSections = prepareForStorage(sectionsWithProcessedImages);
+    const preparedSections = prepareForStorage(sectionsWithProcessedImages as unknown as Section[]);
     
     // Convertimos al formato de la tabla
-    const sectionRows: InsertBoardSection[] = preparedSections.map((section, index) => ({
+    // Usamos el tipo Json para la conversión
+    
+    const sectionRows: InsertBoardSection[] = preparedSections.map((section: {id: string; type: string; title?: string; description?: string; data?: Record<string, unknown>}, index) => ({
       board_id: boardId,
       section_id: section.id,
       type: section.type,
       title: section.title || null,
       description: section.description || null,
-      data: section.data || null,
+      data: section.data as Json || null,
       order: index
     }));
     

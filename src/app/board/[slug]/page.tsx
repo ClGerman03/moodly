@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Section } from "@/app/tablero/types";
+// import { Section } from "@/app/tablero/types";
 import { toast } from "react-hot-toast";
 
 // Servicios
@@ -241,7 +241,7 @@ export default function PublicBoard() {
             {error || "Board not found"}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            The board you're looking for doesn't exist or has been removed.
+            The board you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
           <a 
             href="/"

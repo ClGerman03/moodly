@@ -6,6 +6,24 @@ interface BoardDetailSectionsProps {
   board: {
     sections?: Section[];
   };
+  feedbackData?: {
+    reviewers: {
+      id: string;
+      name: string;
+      lastUpdated: string;
+      completed: boolean;
+      itemCount: number;
+    }[];
+    feedbackStats: {
+      totalReactions: number;
+      positiveReactions: number;
+      negativeReactions: number;
+      neutralReactions: number;
+      totalComments: number;
+      commentsBySection: Record<string, number>;
+    };
+    feedbackItems: Record<string, { itemId: string; section_id: string; reaction: 'positive' | 'negative' | 'neutral'; comments: { text: string; timestamp: string }[] }[]>;
+  } | null;
 }
 
 // Función auxiliar para generar un número pseudoaleatorio determinístico basado en un string
@@ -22,25 +40,50 @@ function generateSeededRandom(seed: string) {
   return random;
 }
 
-const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board }) => {
+const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, feedbackData }) => {
   const sections = board.sections || [];
   
-  // Generar datos estables de feedback para cada sección
+  // Generar o utilizar datos reales de feedback para cada sección
   const sectionFeedbackData = useMemo(() => {
-    // Crear un objeto con IDs de sección como claves y datos de feedback aleatorios
-    return sections.reduce((acc, section) => {
-      // Usar generateSeededRandom para obtener valores consistentes
-      const reactionsRandom = generateSeededRandom(`${section.id}-reactions`);
-      const commentsRandom = generateSeededRandom(`${section.id}-comments`);
-      
-      acc[section.id] = {
-        reactions: Math.floor(reactionsRandom * 10) + 1,
-        comments: Math.floor(commentsRandom * 5) + 1
-      };
-      return acc;
-    }, {} as Record<string, {reactions: number, comments: number}>);
+    // Si tenemos datos de Supabase, extraerlos por sección
+    if (feedbackData?.feedbackStats?.commentsBySection) {
+      // Crear un objeto que contenga estadísticas de feedback por sección
+      return sections.reduce((acc, section) => {
+        const sectionId = section.id;
+        const comments = feedbackData.feedbackStats.commentsBySection[sectionId] || 0;
+        
+        // Contar reacciones para esta sección buscando en todos los items de feedback
+        let reactions = 0;
+        Object.values(feedbackData.feedbackItems).forEach(items => {
+          // Filtrar items por sección y que tengan reacción
+          const sectionItems = items.filter(item => 
+            item.section_id === sectionId && item.reaction
+          );
+          reactions += sectionItems.length;
+        });
+        
+        acc[sectionId] = {
+          reactions,
+          comments
+        };
+        return acc;
+      }, {} as Record<string, {reactions: number, comments: number}>);
+    } else {
+      // Fallback a datos simulados si no tenemos datos reales
+      return sections.reduce((acc, section) => {
+        // Usar generateSeededRandom para obtener valores consistentes
+        const reactionsRandom = generateSeededRandom(`${section.id}-reactions`);
+        const commentsRandom = generateSeededRandom(`${section.id}-comments`);
+        
+        acc[section.id] = {
+          reactions: Math.floor(reactionsRandom * 10) + 1,
+          comments: Math.floor(commentsRandom * 5) + 1
+        };
+        return acc;
+      }, {} as Record<string, {reactions: number, comments: number}>);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections.map(s => s.id).join('-')]); // Deshabilitar regla para este caso específico
+  }, [sections.map(s => s.id).join('-'), feedbackData]); // Deshabilitar regla para este caso específico
   
   // Función para obtener el icono adecuado según el tipo de sección
   const getSectionIcon = (type: SectionType) => {
