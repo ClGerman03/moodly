@@ -153,50 +153,58 @@ const SharePopup: React.FC<SharePopupProps> = ({
         // const hasChanges = true; // Variable no utilizada en la lógica actual
         const processedSections = await Promise.all(
           currentSections.map(async (section) => {
-            // Solo procesar secciones de tipo imageGallery
-            if (section.type !== 'imageGallery') {
-              return section;
-            }
-            
-            try {
-              // Crear un formato compatible con processSectionImages
-              const sectionToProcess = {
-                type: section.type,
-                data: section.data
-              };
-              
-              // Usar directamente el procesador de imágenes del storageService
-              const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
-              
-              // Asegurar que imageMetadata sea del tipo correcto
-              const typedData = { ...processedSection.data };
-              
-              // Convertir los metadatos de imagen al tipo esperado
-              if (typedData.imageMetadata) {
-                const typedMetadata: { [key: string]: ImageMetadata } = {};
-                
-                // Convertir cada entrada de metadatos al tipo ImageMetadata
-                Object.entries(typedData.imageMetadata).forEach(([key, value]) => {
-                  if (value && typeof value === 'object') {
-                    const rawValue = value as Record<string, unknown>;
-                    typedMetadata[key] = {
-                      title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
-                      description: typeof rawValue.description === 'string' ? rawValue.description : undefined
-                    };
+            // Procesamiento específico para cada tipo de sección
+            switch(section.type) {
+              case 'imageGallery':
+                try {
+                  // Crear un formato compatible con processSectionImages
+                  const sectionToProcess = {
+                    type: section.type,
+                    data: section.data
+                  };
+                  
+                  // Usar directamente el procesador de imágenes del storageService
+                  const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
+                  
+                  // Asegurar que imageMetadata sea del tipo correcto
+                  const typedData = { ...processedSection.data };
+                  
+                  // Convertir los metadatos de imagen al tipo esperado
+                  if (typedData.imageMetadata) {
+                    const typedMetadata: { [key: string]: ImageMetadata } = {};
+                    
+                    // Convertir cada entrada de metadatos al tipo ImageMetadata
+                    Object.entries(typedData.imageMetadata).forEach(([key, value]) => {
+                      if (value && typeof value === 'object') {
+                        const rawValue = value as Record<string, unknown>;
+                        typedMetadata[key] = {
+                          title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
+                          description: typeof rawValue.description === 'string' ? rawValue.description : undefined
+                        };
+                      }
+                    });
+                    
+                    typedData.imageMetadata = typedMetadata;
                   }
-                });
-                
-                typedData.imageMetadata = typedMetadata;
-              }
+                  
+                  return {
+                    ...section,
+                    data: typedData
+                  };
+                } catch (error) {
+                  console.error(`Error processing images for section ${section.id}:`, error);
+                  // Continuar con otras secciones incluso si esta falla
+                  return section;
+                }
               
-              return {
-                ...section,
-                data: typedData
-              };
-            } catch (error) {
-              console.error(`Error processing images for section ${section.id}:`, error);
-              // Continuar con otras secciones incluso si esta falla
-              return section;
+              // Otros tipos de secciones son pasados directamente sin procesamiento
+              case 'links':
+              case 'text':
+              case 'typography':
+              case 'palette':
+              default:
+                console.log(`Processing section of type ${section.type} (id: ${section.id})`);
+                return section;
             }
           })
         );
