@@ -137,7 +137,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
       }
       
       // Antes de publicar, procesar las imágenes del tablero
-      const migrationToast = toast.loading("Preparing images for publication...");
+      const migrationToast = toast.loading("Preparing board for publication...");
       
       try {
         // Usar las secciones actuales del estado local en lugar de obtenerlas de la base de datos
@@ -149,7 +149,8 @@ const SharePopup: React.FC<SharePopupProps> = ({
         }
         
         // Procesar cada sección para migrar las imágenes
-        let hasChanges = false;
+        // Siempre asumimos cambios para simplificar el flujo
+        // const hasChanges = true; // Variable no utilizada en la lógica actual
         const processedSections = await Promise.all(
           currentSections.map(async (section) => {
             // Solo procesar secciones de tipo imageGallery
@@ -166,7 +167,6 @@ const SharePopup: React.FC<SharePopupProps> = ({
               
               // Usar directamente el procesador de imágenes del storageService
               const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
-              hasChanges = true;
               
               // Asegurar que imageMetadata sea del tipo correcto
               const typedData = { ...processedSection.data };
@@ -204,25 +204,20 @@ const SharePopup: React.FC<SharePopupProps> = ({
         // Declarar finalBoardId fuera del bloque condicional
         let finalBoardId = boardId;
         
-        // Guardar las secciones procesadas si hubo cambios
-        if (hasChanges) {
-          // Si el boardId es un valor por defecto, crear el tablero primero
-          if (boardId === "mi-tablero" || !boardId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const newBoard = await boardService.createBoard({
-              name: boardName,
-              slug: finalSlug,
-              user_id: (await supabase.auth.getUser()).data.user?.id || '',
-              is_published: true
-            });
-            finalBoardId = newBoard.id;
-          }
-          
-          // Guardar las secciones con las imágenes procesadas
-          await sectionService.saveSections(finalBoardId, processedSections as Section[]);
-          toast.success("Images prepared and published successfully", { id: migrationToast });
-        } else {
-          toast.success("No images needed preparation", { id: migrationToast });
+        // Si el boardId es un valor por defecto, crear el tablero primero
+        if (boardId === "mi-tablero" || !boardId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          const newBoard = await boardService.createBoard({
+            name: boardName,
+            slug: finalSlug,
+            user_id: (await supabase.auth.getUser()).data.user?.id || '',
+            is_published: true
+          });
+          finalBoardId = newBoard.id;
         }
+        
+        // Guardar las secciones (procesadas o no)
+        await sectionService.saveSections(finalBoardId, processedSections as Section[]);
+        toast.success("Board published successfully", { id: migrationToast });
         
         // Publicar el tablero en Supabase si todavía no se ha hecho
         if (boardId !== finalBoardId) {
@@ -241,9 +236,9 @@ const SharePopup: React.FC<SharePopupProps> = ({
         // Notificar al componente padre
         onPublish(finalSlug);
       } catch (error) {
-        console.error("Error preparing images:", error);
-        toast.error(`Error preparing images: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
-        setPublishingError("Error preparing images. Please try again.");
+        console.error("Error preparing board:", error);
+        toast.error(`Error preparing board: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
+        setPublishingError("Error preparing board. Please try again.");
         setIsChecking(false);
         return;
       }

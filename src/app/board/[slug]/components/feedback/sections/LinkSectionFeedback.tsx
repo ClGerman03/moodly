@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { ExternalLink, ArrowUpRight, ArrowLeft, ArrowRight, Globe } from "lucide-react";
+import { ArrowUpRight, ArrowLeft, ArrowRight, Globe, Maximize, Minimize } from "lucide-react";
 import { Section } from "@/app/tablero/types";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 import FeedbackButtons from "../shared/FeedbackButtons";
 import FeedbackIndicator from "../shared/FeedbackIndicator";
 import CommentSection from "../shared/CommentSection";
-import { cn } from "@/lib/utils";
+import SpotifyEmbed from "@/components/players/SpotifyEmbed";
+
+// Importar react-player con lazy loading para mejorar el rendimiento
+const ReactPlayer = lazy(() => import('react-player/lazy'));
 
 interface LinkItem {
   id: string;
@@ -42,6 +45,47 @@ const LinkDisplay: React.FC<LinkDisplayProps> = ({
   onSwipe,
   onOpenLink
 }) => {
+  // Mostrar reproductor automáticamente para contenido de Spotify
+  const isSpotifyContent = useMemo(() => {
+    return link.type === "spotify" || /spotify\.com/.test(link.url);
+  }, [link.url, link.type]);
+  
+  // Determinar si es contenido de YouTube específicamente
+  const isYouTubeContent = useMemo(() => {
+    return link.type === "youtube" || /youtube\.com|youtu\.be/.test(link.url);
+  }, [link.url, link.type]);
+
+  // Determinar si es contenido premium (Spotify o YouTube)
+  const isPremiumContent = useMemo(() => {
+    return isSpotifyContent || isYouTubeContent;
+  }, [isSpotifyContent, isYouTubeContent]);
+  
+  // Para contenido no-Spotify, mantener el comportamiento anterior (toggle manual)
+  const [showPlayer, setShowPlayer] = useState(isPremiumContent);
+  // Expandir por defecto para Spotify y YouTube
+  const [isExpanded, setIsExpanded] = useState(isPremiumContent);
+  
+  // Verificar si el enlace es compatible con ReactPlayer
+  const isPlayable = useMemo(() => {
+    // Verificar los patrones de URL más comunes para contenido reproducible
+    return (
+      link.type === "youtube" || 
+      link.type === "spotify" || 
+      /youtube\.com|youtu\.be|spotify\.com|soundcloud\.com|vimeo\.com/.test(link.url)
+    );
+  }, [link.url, link.type]);
+
+  // Determinar si es contenido de audio
+  const isAudioContent = useMemo(() => {
+    return (
+      link.type === "spotify" || 
+      /spotify\.com|soundcloud\.com/.test(link.url)
+    );
+  }, [link.url, link.type]);
+
+  // Tamaño del reproductor basado en si está expandido o no
+  const playerHeight = isExpanded ? '320px' : '200px';
+  
   // Determine icon based on link type
   const getLinkIcon = () => {
     switch(link.type) {
@@ -81,13 +125,28 @@ const LinkDisplay: React.FC<LinkDisplayProps> = ({
   // Generate a background color based on the link type
   const getLinkBackground = () => {
     switch(link.type) {
-      case "spotify": return "bg-green-50 dark:bg-green-900/20";
-      case "youtube": return "bg-red-50 dark:bg-red-900/20";
+      case "spotify": return "bg-black text-white dark:bg-black dark:text-white";
+      case "youtube": return "bg-black text-white dark:bg-black dark:text-white";
       case "twitter": return "bg-blue-50 dark:bg-blue-900/20";
       case "instagram": return "bg-pink-50 dark:bg-pink-900/20";
       case "threads": return "bg-gray-50 dark:bg-gray-900/20";
       default: return "bg-gray-50 dark:bg-gray-800/20";
     }
+  };
+
+  // Función para alternar la visualización del reproductor
+  const togglePlayer = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // No permitir ocultar reproductor de Spotify una vez mostrado
+    if (!isPremiumContent || !showPlayer) {
+      setShowPlayer(!showPlayer);
+    }
+  };
+
+  // Función para alternar el modo expandido
+  const toggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
   };
 
   return (
@@ -104,56 +163,154 @@ const LinkDisplay: React.FC<LinkDisplayProps> = ({
       onDragEnd={onSwipe}
       whileTap={isMobile ? { cursor: "grabbing" } : undefined}
     >
-      <div className="relative w-full rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/20">
-        {/* Link header with icon and title */}
-        <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", getLinkBackground())}>
+      {/* Reproductor embebido si es compatible y está activado */}
+      {isPlayable && showPlayer ? (
+        <div className="w-full mb-3 relative">
+          <div className={`w-full overflow-hidden rounded-xl ${isExpanded ? 'shadow-md' : 'shadow-sm'}`}>
+            {isSpotifyContent ? (
+              // Reproductor embebido oficial de Spotify
+              <SpotifyEmbed 
+                url={link.url}
+                compact={false} // Siempre en modo completo
+                className={`w-full ${isExpanded ? 'p-0' : 'p-0'}`}
+              />
+            ) : isYouTubeContent ? (
+              // ReactPlayer para YouTube optimizado
+              <Suspense fallback={
+                <div className={`w-full bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center`} style={{ height: playerHeight }}>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Cargando reproductor...</div>
+                </div>
+              }>
+                <ReactPlayer
+                  url={link.url}
+                  width="100%"
+                  height={playerHeight}
+                  controls={true}
+                  light={false} // Sin vista previa para reproducción directa
+                  playing={true} // Reproducir automáticamente
+                  className="react-player"
+                  config={{
+                    youtube: {
+                      playerVars: { 
+                        modestbranding: 1,
+                        rel: 0
+                      }
+                    }
+                  }}
+                />
+              </Suspense>
+            ) : isAudioContent ? (
+              // Reproductor para otro contenido de audio (si lo hay en el futuro)
+              <Suspense fallback={
+                <div className={`w-full bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center`} style={{ height: playerHeight }}>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Cargando reproductor...</div>
+                </div>
+              }>
+                <ReactPlayer
+                  url={link.url}
+                  width="100%"
+                  height={playerHeight}
+                  controls={true}
+                  light={false}
+                  className="react-player"
+                />
+              </Suspense>
+            ) : (
+              // ReactPlayer para video
+              <Suspense fallback={
+                <div className={`w-full bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center`} style={{ height: playerHeight }}>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Cargando reproductor...</div>
+                </div>
+              }>
+                <ReactPlayer
+                  url={link.url}
+                  width="100%"
+                  height={playerHeight}
+                  controls={true}
+                  light={true} 
+                  className="react-player"
+                  config={{
+                    youtube: {
+                      playerVars: { 
+                        modestbranding: 1,
+                        rel: 0
+                      }
+                    }
+                  }}
+                />
+              </Suspense>
+            )}
+            
+            {/* Controles para expandir/contraer el reproductor */}
+            {!isPremiumContent && (
+              <div className="absolute top-2 right-2 flex gap-1">
+                <button 
+                  onClick={toggleExpand} 
+                  className="p-1 bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/80 rounded-full shadow-sm text-gray-700 dark:text-gray-300"
+                  aria-label={isExpanded ? "Contraer reproductor" : "Expandir reproductor"}
+                >
+                  {isExpanded ? <Minimize size={14} /> : <Maximize size={14} />}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+      
+      <div 
+        className={`p-3 rounded-xl ${getLinkBackground()} transition-all duration-200 hover:shadow-sm cursor-pointer ${isPremiumContent && showPlayer ? 'py-2 px-3' : 'p-3'} ${isPremiumContent ? 'bg-black text-white hover:bg-black/90' : ''}`}
+        onClick={() => onOpenLink(link)}
+      >
+        <div className="flex justify-between items-start">
+          <div className="flex items-center space-x-1.5 mb-1.5">
+            <div className="text-gray-600 dark:text-gray-300">
               {getLinkIcon()}
             </div>
-            <div>
-              <h3 className="text-base font-medium text-gray-800 dark:text-gray-200">
-                {link.title}
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px] sm:max-w-[300px]">
-                {link.url}
-              </p>
-            </div>
+            <span className={`text-xs ${isPremiumContent ? 'text-gray-300' : 'text-gray-500 dark:text-gray-400'} font-normal capitalize`}>
+              {link.type}
+            </span>
           </div>
           
-          <button
-            onClick={() => onOpenLink(link)}
-            className="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Open link"
-          >
-            <ExternalLink size={16} />
-          </button>
+          <div className="flex space-x-1">
+            {/* Botón para abrir/cerrar el reproductor si es compatible */}
+            {isPlayable && !isPremiumContent && (
+              <button 
+                onClick={togglePlayer} 
+                className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-full transition-colors"
+                aria-label={showPlayer ? "Ocultar reproductor" : "Mostrar reproductor"}
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 3l14 9-14 9V3z"/>
+                </svg>
+              </button>
+            )}
+            
+            {/* Botón para abrir enlace en nueva pestaña */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(link.url, '_blank', 'noopener,noreferrer');
+              }} 
+              className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-full transition-colors"
+              aria-label="Abrir enlace en nueva pestaña"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         
-        {/* Link content preview */}
-        <div className="p-4">
-          <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
-            {link.description || "No description available for this link."}
-          </div>
-          
-          {/* Link preview thumbnail (we could enhance this in the future) */}
-          <div className="w-full h-48 bg-gray-100 dark:bg-gray-700/50 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
-            {/* This is a placeholder - in a real implementation we would fetch actual link previews */}
-            <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500">
-              <ArrowUpRight size={32} />
-            </div>
-            
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent p-3 text-white text-sm font-medium">
-              Preview - Click to open full content
-            </div>
-          </div>
-          
-          <button
-            onClick={() => onOpenLink(link)}
-            className="w-full py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/40 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-          >
-            Visit {link.type === "other" ? "website" : link.type} <ExternalLink size={14} />
-          </button>
+        <h4 className={`text-xs font-medium ${isPremiumContent ? 'text-white' : 'text-gray-800 dark:text-gray-200'} mb-1 line-clamp-1`}>
+          {link.title}
+        </h4>
+        
+        {!isPremiumContent && (
+          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mb-1.5">
+            {link.description}
+          </p>
+        )}
+        
+        <div className={`flex items-center text-[10px] ${isPremiumContent ? 'text-gray-400' : 'text-gray-500 dark:text-gray-500'} font-light overflow-hidden whitespace-nowrap text-ellipsis`}>
+          {link.url}
         </div>
       </div>
     </motion.div>
@@ -365,7 +522,7 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+              className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl"
             >
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 ¿Qué opinas sobre este enlace?
