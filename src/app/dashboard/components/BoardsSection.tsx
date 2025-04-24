@@ -5,98 +5,19 @@
  * 
  * Component that displays the user's boards and
  * provides options to create new boards.
+ * Implementa React Query para la gestión de caché y estados de carga.
  */
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Loader2, ClipboardList, Eye } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import BoardReviewers from './BoardReviewers'
-import { boardService } from '@/services'
-
-// Tipo para la estructura de un tablero
-interface BoardItem {
-  id: string
-  name: string
-  updatedAt: string
-  createdAt: string
-  slug: string
-  isPublished: boolean
-  isActive?: boolean // Campo para indicar si el tablero está activo
-  reviewers?: {id: string, avatar?: string, name?: string}[] // Campo para los revisores
-  reviewCount?: number // Campo para la cantidad de revisores
-}
+import { useBoards } from '@/hooks/useBoards'
 
 export default function BoardsSection() {
   const { user } = useAuth()
-  const [boards, setBoards] = useState<BoardItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Función para cargar los tableros del usuario desde Supabase
-  const loadBoards = async () => {
-    try {
-      if (!user || !user.id) {
-        console.log('No hay usuario disponible para cargar tableros');
-        return;
-      }
-      
-      console.log('Cargando tableros desde Supabase...');
-      
-      // Obtener los tableros del usuario desde Supabase
-      const supabaseBoards = await boardService.getBoardsByUser(user.id);
-      console.log(`Se encontraron ${supabaseBoards.length} tableros en Supabase`);
-      
-      // Transformar a nuestra estructura de BoardItem
-      const userBoards: BoardItem[] = supabaseBoards.map(board => {
-        // Simulamos datos de revisores para la demo
-        const demoReviewCount = Math.floor(Math.random() * 5) + 1; // Entre 1 y 5 revisores
-        
-        return {
-          id: board.id,
-          name: board.name,
-          updatedAt: board.updated_at,
-          createdAt: board.created_at,
-          slug: board.slug,
-          isPublished: board.is_published,
-          isActive: board.is_published, // Consideramos activos los publicados
-          reviewCount: demoReviewCount // Datos de demo para revisores
-        };
-      });
-      
-      console.log(`Se procesaron ${userBoards.length} tableros para el usuario ${user.id}`);
-      
-      // Ordenar tableros por fecha de actualización (más reciente primero)
-      userBoards.sort((a, b) => 
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      );
-      
-      setBoards(userBoards);
-    } catch (error) {
-      console.error('Error al cargar tableros:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Efecto para cargar los tableros cuando el usuario está disponible
-  useEffect(() => {
-    if (!user) {
-      // Si no hay usuario, mostrar el estado de carga y no hacer nada más
-      console.log('No hay usuario disponible para cargar tableros');
-      return;
-    }
-
-    console.log('Usuario disponible, cargando tableros...');
-    setIsLoading(true);
-    
-    // Cargar tableros con un pequeño retraso para dar tiempo a que se complete la autenticación
-    const loadTimer = setTimeout(() => {
-      loadBoards();
-    }, 300);
-    
-    return () => clearTimeout(loadTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  // Utilizamos el hook personalizado que implementa React Query
+  const { boards, isLoading } = useBoards(user)
 
   return (
     <div className="mt-8">
@@ -201,5 +122,5 @@ export default function BoardsSection() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import SpotifyEmbed from "@/components/players/SpotifyEmbed";
 
 interface LinkItem {
   id: string;
@@ -265,6 +266,15 @@ const LinkSection: React.FC<LinkSectionProps> = ({ initialLinks = [], onChange, 
                   <p className="text-xs text-gray-400 dark:text-gray-600 truncate mt-1">
                     {link.url}
                   </p>
+                  {link.type === "spotify" && (
+                    <div className="mt-3">
+                      <SpotifyEmbed 
+                        url={link.url} 
+                        compact={true}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               

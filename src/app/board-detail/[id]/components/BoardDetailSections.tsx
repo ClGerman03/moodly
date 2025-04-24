@@ -3,9 +3,12 @@ import { Palette, Link2, Type, FileText, Image as ImageIcon } from 'lucide-react
 import { Section, SectionType } from '@/app/tablero/types';
 
 interface BoardDetailSectionsProps {
-  board: {
+  // Soporte para el objeto board completo (compatibilidad anterior)
+  board?: {
     sections?: Section[];
   };
+  // Soporte para recibir directamente las secciones (para el nuevo hook)
+  sections?: Section[];
   feedbackData?: {
     reviewers: {
       id: string;
@@ -40,15 +43,15 @@ function generateSeededRandom(seed: string) {
   return random;
 }
 
-const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, feedbackData }) => {
-  const sections = board.sections || [];
+const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, sections, feedbackData }) => {
+  const sectionsToUse = sections || (board?.sections || []);
   
   // Generar o utilizar datos reales de feedback para cada sección
   const sectionFeedbackData = useMemo(() => {
     // Si tenemos datos de Supabase, extraerlos por sección
     if (feedbackData?.feedbackStats?.commentsBySection) {
       // Crear un objeto que contenga estadísticas de feedback por sección
-      return sections.reduce((acc, section) => {
+      return sectionsToUse.reduce((acc, section) => {
         const sectionId = section.id;
         const comments = feedbackData.feedbackStats.commentsBySection[sectionId] || 0;
         
@@ -70,7 +73,7 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, feedba
       }, {} as Record<string, {reactions: number, comments: number}>);
     } else {
       // Fallback a datos simulados si no tenemos datos reales
-      return sections.reduce((acc, section) => {
+      return sectionsToUse.reduce((acc, section) => {
         // Usar generateSeededRandom para obtener valores consistentes
         const reactionsRandom = generateSeededRandom(`${section.id}-reactions`);
         const commentsRandom = generateSeededRandom(`${section.id}-comments`);
@@ -83,7 +86,7 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, feedba
       }, {} as Record<string, {reactions: number, comments: number}>);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections.map(s => s.id).join('-'), feedbackData]); // Deshabilitar regla para este caso específico
+  }, [sectionsToUse.map(s => s.id).join('-'), feedbackData]); // Deshabilitar regla para este caso específico
   
   // Función para obtener el icono adecuado según el tipo de sección
   const getSectionIcon = (type: SectionType) => {
@@ -186,7 +189,7 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, feedba
     }
   };
   
-  if (sections.length === 0) {
+  if (sectionsToUse.length === 0) {
     return (
       <div className="bg-gray-50 rounded-xl p-6 text-center">
         <p className="text-gray-500">This board doesn&apos;t have any sections yet.</p>
@@ -201,7 +204,7 @@ const BoardDetailSections: React.FC<BoardDetailSectionsProps> = ({ board, feedba
       </div>
       
       <div className="space-y-3">
-        {sections.map((section) => (
+        {sectionsToUse.map((section) => (
           <div key={section.id} className="bg-white border-b border-gray-100 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center">

@@ -12,6 +12,7 @@ interface BoardDetailHeaderProps {
     createdAt: string;
     updatedAt: string;
     isPublished?: boolean;
+    slug?: string;
   };
 }
 
@@ -73,7 +74,7 @@ const BoardDetailHeader: React.FC<BoardDetailHeaderProps> = ({ board }) => {
   // Función para copiar el enlace del tablero al portapapeles
   const copyBoardLink = () => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const boardUrl = `${baseUrl}/board/${board.id}`;
+    const boardUrl = `${baseUrl}/board/${board.slug || board.id}`;
     
     navigator.clipboard.writeText(boardUrl)
       .then(() => {
@@ -128,7 +129,7 @@ const BoardDetailHeader: React.FC<BoardDetailHeaderProps> = ({ board }) => {
           <ActionButton
             icon={<ExternalLink size={12} className="md:w-4 md:h-4" />}
             text="View Board"
-            href={`/board/${board.id}`}
+            href={`/board/${board.slug || board.id}`}
             target="_blank"
             primary
           />

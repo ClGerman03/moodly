@@ -3,10 +3,34 @@
 import { useAuth } from "@/contexts/AuthContext";
 import HeaderOptions from "./components/HeaderOptions";
 import BoardsSection from "./components/BoardsSection";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
-  // Obtenemos el user para utilizarlo en algunos componentes
-  const { user } = useAuth();
+  // Obtenemos el user y el estado de carga para la autenticación
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  // Efecto para redirigir al usuario si no está autenticado
+  useEffect(() => {
+    // Solo verificar después de que se haya completado la carga inicial
+    if (!isLoading && !user) {
+      console.log("Usuario no autenticado, redirigiendo a /auth");
+      router.replace("/auth");
+    }
+  }, [user, isLoading, router]);
+
+  // Si estamos cargando o redirigiendo, mostrar un estado de carga
+  if (isLoading || (!user && typeof window !== "undefined")) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center p-8">
+          <p className="text-gray-600 mb-2">Verificando sesión...</p>
+          <div className="w-10 h-10 border-t-2 border-gray-500 rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -26,16 +50,8 @@ export default function Dashboard() {
           Manage your visual boards, create new ones or access existing ones.
         </p>
         
-        {/* Boards section */}
-        {user ? (
-          <BoardsSection />
-        ) : (
-          <div className="mt-8 bg-gray-50 rounded-lg p-8 text-center">
-            <p className="text-gray-600">
-              Loading user information...
-            </p>
-          </div>
-        )}
+        {/* Boards section - solo se muestra si hay un usuario autenticado */}
+        <BoardsSection />
       </div>
     </div>
   );

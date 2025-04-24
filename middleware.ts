@@ -26,10 +26,8 @@ export async function middleware(req: NextRequest) {
   const path = requestUrl.pathname;
 
   // Definir las áreas de la aplicación
-  // 1. Rutas que requieren autenticación para ciertas operaciones
-  // Nota: En Moodly, el tablero es accesible sin autenticación, pero ciertas
-  // operaciones como guardar o compartir tableros podrían requerir autenticación
-  const PROTECTED_OPERATIONS = [
+  // 1. Rutas que requieren autenticación
+  const PROTECTED_ROUTES = [
     '/tablero/guardar',     // Guardar un tablero (requiere cuenta)
     '/tablero/compartir',   // Compartir un tablero (requiere cuenta)
     '/perfil',              // Acceso al perfil de usuario
@@ -51,7 +49,8 @@ export async function middleware(req: NextRequest) {
   // Verificar tipo de ruta
   const isCallbackRoute = path.startsWith(CALLBACK_ROUTE);
   const isLogoutRoute = path === '/' && requestUrl.searchParams.get('logout') === 'true'; 
-  const isProtectedOperation = PROTECTED_OPERATIONS.some(route => path.startsWith(route));
+  const isDashboardRoute = path === '/dashboard';
+  const isProtectedRoute = PROTECTED_ROUTES.some(route => path === route || path.startsWith(`${route}/`));
   const isAuthRoute = AUTH_ROUTES.some(route => path.startsWith(route)) && !isCallbackRoute;
 
   // No interceptar la ruta de callback ni la ruta de logout
@@ -59,9 +58,15 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // Comprobar explícitamente la ruta del dashboard para verificar si hay sesión
+  if (isDashboardRoute && !session) {
+    console.log(`Redirección de dashboard a auth: ${path} - sin sesión`);
+    return NextResponse.redirect(new URL('/auth', requestUrl.origin));
+  }
+
   // Redireccionar según estado de sesión y tipo de ruta
   // 1. Si intenta acceder a una operación protegida sin sesión
-  if (isProtectedOperation && !session) {
+  if (isProtectedRoute && !session) {
     // Log para depuración
     console.log(`Redirección de ruta protegida: ${path} - sin sesión`);
     

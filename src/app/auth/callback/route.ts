@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code)
   }
   
-  // Redirigir a la página principal o a la página anterior si existe en la URL
-  const redirectTo = requestUrl.searchParams.get('redirect_to') || '/tablero'
+  // Redirigir al dashboard o a la página anterior si existe en la URL
+  const redirectTo = requestUrl.searchParams.get('redirect_to') || '/dashboard'
   return NextResponse.redirect(new URL(redirectTo, requestUrl.origin))
 }
