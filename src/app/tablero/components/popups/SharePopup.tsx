@@ -8,6 +8,8 @@ import { storageService } from "@/services/storageService";
 import { toast } from "react-hot-toast";
 import { Section, ImageMetadata } from "@/app/tablero/types";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 interface SharePopupProps {
   isOpen: boolean;
@@ -29,6 +31,9 @@ const SharePopup: React.FC<SharePopupProps> = ({
   currentSections = [], // Usar secciones actuales del estado local
   onPublish
 }) => {
+  // Obtener el estado de autenticación
+  const { user } = useAuth();
+  
   // Estado para la URL personalizada
   const [customUrlSegment, setCustomUrlSegment] = useState(() => {
     // Generar un slug basado en el nombre del tablero
@@ -45,6 +50,7 @@ const SharePopup: React.FC<SharePopupProps> = ({
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
   const [boardLink, setBoardLink] = useState<string>("");
   const [isChecking, setIsChecking] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   
   // Referencias para detectar clics fuera del popup
   const popupRef = useRef<HTMLDivElement>(null);
@@ -120,6 +126,112 @@ const SharePopup: React.FC<SharePopupProps> = ({
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-');
       
+      // Verificar si el usuario está autenticado
+      if (!user) {
+        // Usuario no autenticado - guardamos en localStorage y mostramos mensaje
+        const migrationToast = toast.loading("Preparing board for local storage...");
+        
+        try {
+          // Procesar las imágenes como siempre
+          if (!currentSections || currentSections.length === 0) {
+            toast.dismiss(migrationToast);
+            setIsChecking(false);
+            setPublishingError("No sections found for this board");
+            return;
+          }
+
+          // Procesar cada sección para migrar las imágenes
+          const processedSections = await Promise.all(
+            currentSections.map(async (section) => {
+              // Procesamiento específico para cada tipo de sección
+              switch(section.type) {
+                case 'imageGallery':
+                  try {
+                    // Crear un formato compatible con processSectionImages
+                    const sectionToProcess = {
+                      type: section.type,
+                      data: section.data
+                    };
+                    
+                    // Usar directamente el procesador de imágenes del storageService
+                    const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
+                    
+                    // Asegurar que imageMetadata sea del tipo correcto
+                    const typedData = { ...processedSection.data };
+                    
+                    // Convertir los metadatos de imagen al tipo esperado
+                    if (typedData.imageMetadata) {
+                      const typedMetadata: { [key: string]: ImageMetadata } = {};
+                      
+                      // Convertir cada entrada de metadatos al tipo ImageMetadata
+                      Object.entries(typedData.imageMetadata).forEach(([key, value]) => {
+                        if (value && typeof value === 'object') {
+                          const rawValue = value as Record<string, unknown>;
+                          typedMetadata[key] = {
+                            title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
+                            description: typeof rawValue.description === 'string' ? rawValue.description : undefined
+                          };
+                        }
+                      });
+                      
+                      typedData.imageMetadata = typedMetadata;
+                    }
+                    
+                    return {
+                      ...section,
+                      data: typedData
+                    };
+                  } catch (error) {
+                    console.error(`Error processing images for section ${section.id}:`, error);
+                    // Continuar con otras secciones incluso si esta falla
+                    return section;
+                  }
+                
+                // Otros tipos de secciones son pasados directamente sin procesamiento
+                case 'links':
+                case 'text':
+                case 'typography':
+                case 'palette':
+                default:
+                  console.log(`Processing section of type ${section.type} (id: ${section.id})`);
+                  return section;
+              }
+            })
+          );
+          
+          // Guardar en localStorage con el formato adecuado
+          const pendingBoardData = {
+            name: boardName,
+            slug: finalSlug,
+            sections: processedSections,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            pendingPublication: true
+          };
+          
+          // Guardar en localStorage
+          localStorage.setItem('moodly-pending-board', JSON.stringify(pendingBoardData));
+          
+          toast.success("Board saved locally. Sign in to publish!", { id: migrationToast });
+          
+          // Mostrar el prompt de autenticación
+          setShowAuthPrompt(true);
+          setShowUrlSuccess(true);
+          setIsPublished(true);
+          
+          // Notificar al componente padre
+          onPublish(finalSlug);
+        } catch (error) {
+          console.error("Error preparing board for localStorage:", error);
+          toast.error(`Error preparing board: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
+          setPublishingError("Error preparing board. Please try again.");
+          return;
+        }
+        
+        return;
+      }
+      
+      // A partir de aquí continúa el código original para usuarios autenticados
       // Verificar disponibilidad del slug en Supabase
       setIsChecking(true);
       try {
@@ -332,10 +444,22 @@ const SharePopup: React.FC<SharePopupProps> = ({
                     className="p-2 mb-1 text-xs flex items-center text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md"
                   >
                     <LucideCheck size={14} className="mr-1.5" />
-                    Board published successfully!
+                    {showAuthPrompt 
+                      ? "Board ready! Sign in to publish it."
+                      : "Board published successfully!"}
                   </motion.div>
                 )}
               </AnimatePresence>
+              
+              {/* Prompt de autenticación para usuarios no autenticados */}
+              {showAuthPrompt && (
+                <div className="mt-4 p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                    Your board is almost ready! Sign in with Google to publish and share it with others.
+                  </p>
+                  <GoogleSignInButton text="Sign in with Google" />
+                </div>
+              )}
               
               {/* Botón de publicar */}
               <button
@@ -349,18 +473,13 @@ const SharePopup: React.FC<SharePopupProps> = ({
                     : "bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
                 }`}
               >
-                {isPublished ? (
-                  <span className="flex items-center justify-center">
-                    <LucideCheck size={16} className="mr-1.5" />
-                    Published
-                  </span>
-                ) : isChecking ? (
-                  "Checking availability..."
-                ) : (
-                  "Publish board"
-                )}
+                {isPublished
+                  ? "Published"
+                  : isChecking
+                  ? "Checking..."
+                  : "Publish Board"}
               </button>
-              
+
               {/* Enlace para compartir */}
               {isPublished && boardLink && (
                 <div className="mt-4">

@@ -77,9 +77,9 @@ export async function middleware(req: NextRequest) {
 
   // 2. Si intenta acceder a una ruta de auth ya estando autenticado
   if (isAuthRoute && session) {
-    // Obtener la URL de retorno si existe, sino ir al tablero
+    // Obtener la URL de retorno si existe, sino ir al dashboard
     const returnUrl = requestUrl.searchParams.get('returnUrl');
-    return NextResponse.redirect(new URL(returnUrl || '/tablero', requestUrl.origin));
+    return NextResponse.redirect(new URL(returnUrl || '/dashboard', requestUrl.origin));
   }
 
   // Permitir el acceso a todas las demás rutas
