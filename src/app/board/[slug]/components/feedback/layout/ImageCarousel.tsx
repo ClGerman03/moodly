@@ -38,7 +38,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
   }, [onNext]);
 
   return (
-    <div className="relative h-[75vh] w-full overflow-hidden">
+    <div className={`relative ${isMobile ? "h-auto aspect-[3/4]" : "h-[60vh]"} w-full overflow-hidden`}>
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={currentIndex}
@@ -61,7 +61,8 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
               alt={`Image ${currentIndex + 1}`}
               fill
               className="object-contain rounded-xl"
-              sizes="100vw"
+              sizes={isMobile ? "(max-width: 768px) 100vw" : "50vw"}
+              style={{ objectFit: "contain", objectPosition: "center" }}
               priority
             />
 

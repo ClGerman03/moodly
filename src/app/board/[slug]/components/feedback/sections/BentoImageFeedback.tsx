@@ -62,7 +62,7 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
     imageMetadata[selectedItemForComment] || {} : {};
 
   // Ajustar altura del carrusel según el dispositivo
-  const carouselHeight = isMobile ? "h-[65vh]" : "h-[55vh]";
+  const carouselHeight = isMobile ? "h-auto aspect-[3/4]" : "h-[60vh]";
   
   // Handlers para navegación del carrusel
   const handleSwipe = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -90,11 +90,11 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   };
 
   return (
-    <div className="py-6" ref={containerRef}>
+    <div className={isMobile ? "py-2" : "py-6"} ref={containerRef}>
       {/* Carrusel de imágenes */}
       <div className="max-w-4xl mx-auto">
         {/* Contenedor del carrusel */}
-        <div className={`relative ${carouselHeight} transition-all duration-300`}>
+        <div className={`relative ${carouselHeight} transition-all duration-300 overflow-hidden rounded-xl`}>
           <ImageCarousel
             images={images}
             currentIndex={currentImageIndex}
@@ -136,8 +136,8 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
           </ImageCarousel>
         </div>
         
-        {/* Panel de feedback - siempre debajo del carrusel */}
-        <div className="mt-4 flex justify-center relative z-30">
+        {/* Panel de feedback - completamente debajo del carrusel */}
+        <div className="mt-6 flex justify-center">
           <div className="bg-gray-50 dark:bg-gray-800/60 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm">
             <FeedbackButtons
               onFeedback={(type) => handleItemFeedback(currentImage, type)}

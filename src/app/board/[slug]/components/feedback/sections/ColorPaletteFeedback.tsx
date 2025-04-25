@@ -237,7 +237,7 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
                 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
-            aria-label="Paleta anterior"
+            aria-label="Previous palette"
           >
             <ArrowLeft size={16} />
           </button>
@@ -254,7 +254,7 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
                 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
-            aria-label="Siguiente paleta"
+            aria-label="Next palette"
           >
             <ArrowRight size={16} />
           </button>
@@ -279,7 +279,7 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
               onSubmitComment={handlePaletteCommentSubmit}
               onCancelComment={handleCancelComment}
               existingComments={getItemComments(activePalette.id)}
-              title="Añadir comentario sobre esta paleta"
+              title="Add comment about this palette"
             />
           ) : (
             <motion.div 
@@ -290,7 +290,7 @@ const ColorPaletteFeedback: React.FC<ColorPaletteFeedbackProps> = ({
               className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
             >
               <div className="text-sm text-gray-600 dark:text-gray-300">
-                ¿Qué te parece esta paleta de colores?
+                What do you think about this color palette?
               </div>
               <FeedbackButtons 
                 onFeedback={handlePaletteFeedback}

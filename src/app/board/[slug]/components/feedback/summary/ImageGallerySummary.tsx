@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ThumbsUp, ThumbsDown, PenTool } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import { Section } from "@/app/tablero/types";
 import { NormalizedFeedback } from '../adapters/feedbackNormalizer';
 import Image from 'next/image';
@@ -12,15 +12,15 @@ interface ImageGallerySummaryProps {
 }
 
 /**
- * Componente especializado para mostrar el resumen de feedback de galería de imágenes
+ * Component for displaying image gallery feedback summary
  */
 const ImageGallerySummary: React.FC<ImageGallerySummaryProps> = ({
   normalizedFeedback
 }) => {
-  // Obtener todas las imágenes que tienen feedback
+  // Get all images with feedback
   const imagesWithFeedback = normalizedFeedback.reactions.map(r => r.id);
   
-  // Agrupar comentarios por imagen
+  // Group comments by image
   const commentsByImage: Record<string, string[]> = {};
   normalizedFeedback.comments.forEach(comment => {
     if (!commentsByImage[comment.id]) {
@@ -29,7 +29,7 @@ const ImageGallerySummary: React.FC<ImageGallerySummaryProps> = ({
     commentsByImage[comment.id].push(comment.comment);
   });
   
-  // Obtener todas las imágenes únicas que tienen feedback o comentarios
+  // Get all unique images that have feedback or comments
   const allFeedbackImages = Array.from(
     new Set([
       ...imagesWithFeedback,
@@ -37,68 +37,83 @@ const ImageGallerySummary: React.FC<ImageGallerySummaryProps> = ({
     ])
   );
   
-  // Obtener el tipo de reacción para una imagen
+  // Get reaction type for an image
   const getReactionType = (imageUrl: string) => {
     const reaction = normalizedFeedback.reactions.find(r => r.id === imageUrl);
     return reaction?.type;
   };
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {allFeedbackImages.map((imageUrl, index) => (
-        <div key={index} className="flex items-start border-b border-gray-100 dark:border-gray-700 pb-3 last:border-0">
-          <div className="relative h-32 w-32 mx-auto mb-2 overflow-hidden rounded-md">
-            <Image 
-              src={imageUrl}
-              alt="Gallery image"
-              fill
-              sizes="128px"
-              className="object-cover" 
-            />
-          </div>
-          <div className="flex-grow">
-            <div className="flex items-center mb-1">
-              {getReactionType(imageUrl) === 'positive' && (
-                <div className="flex items-center text-green-500">
-                  <ThumbsUp size={14} className="mr-1" />
-                  <span className="text-sm">Positivo</span>
+        <div key={index} className="border-b border-gray-100 dark:border-gray-700 pb-4 mb-4 last:border-0">
+          <div className="flex items-start gap-4">
+            {/* Image preview */}
+            <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md">
+              <Image 
+                src={imageUrl}
+                alt="Gallery image"
+                fill
+                sizes="96px"
+                className="object-cover" 
+              />
+            </div>
+            
+            <div className="flex-grow">
+              {/* Reaction type badge */}
+              <div className="flex justify-end items-center mb-3">
+                <div>
+                  {getReactionType(imageUrl) === 'positive' && (
+                    <div className="flex items-center text-green-500">
+                      <ThumbsUp size={14} className="mr-1" />
+                      <span className="text-xs">Positive</span>
+                    </div>
+                  )}
+                  {getReactionType(imageUrl) === 'negative' && (
+                    <div className="flex items-center text-red-500">
+                      <ThumbsDown size={14} className="mr-1" />
+                      <span className="text-xs">Negative</span>
+                    </div>
+                  )}
+                  {/* Show comment indicator if no specific reaction or comment type */}
+                  {(!getReactionType(imageUrl) || getReactionType(imageUrl) === 'comment') && commentsByImage[imageUrl] && (
+                    <div className="flex items-center text-amber-500">
+                      <MessageSquare size={14} className="mr-1" />
+                      <span className="text-xs">Comment</span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {getReactionType(imageUrl) === 'negative' && (
-                <div className="flex items-center text-red-500">
-                  <ThumbsDown size={14} className="mr-1" />
-                  <span className="text-sm">Negativo</span>
-                </div>
-              )}
-              {/* Mostrar indicador de comentario si no hay reacción específica */}
-              {(!getReactionType(imageUrl) || getReactionType(imageUrl) === 'comment') && commentsByImage[imageUrl] && (
-                <div className="flex items-center text-amber-500">
-                  <PenTool size={14} className="mr-1" />
-                  <span className="text-sm">Comentado</span>
+              </div>
+              
+              {/* Render all comments associated with this image */}
+              {commentsByImage[imageUrl] && commentsByImage[imageUrl].length > 0 && (
+                <div className="space-y-2">
+                  {commentsByImage[imageUrl].map((comment, idx) => (
+                    <div 
+                      key={idx} 
+                      className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-md"
+                    >
+                      <div className="flex items-center mb-1 text-gray-500 dark:text-gray-400">
+                        <MessageSquare size={12} className="mr-1" />
+                        <span className="text-xs">
+                          {commentsByImage[imageUrl].length > 1 ? `Comment ${idx + 1}:` : 'Comment:'}
+                        </span>
+                      </div>
+                      <p className="text-sm">&quot;{comment}&quot;</p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-            
-            {/* Renderizar todos los comentarios asociados a esta imagen */}
-            {commentsByImage[imageUrl] && commentsByImage[imageUrl].length > 0 && (
-              <div className="mt-2">
-                {commentsByImage[imageUrl].map((comment, idx) => (
-                  <div 
-                    key={idx} 
-                    className="mb-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded-md"
-                  >
-                    <div className="flex items-center mb-1 text-gray-500">
-                      <PenTool size={12} className="mr-1" />
-                      <span className="text-xs">Comentario{commentsByImage[imageUrl].length > 1 ? ` ${idx + 1}` : ''}:</span>
-                    </div>
-                    &ldquo;{comment}&rdquo;
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       ))}
+      
+      {allFeedbackImages.length === 0 && (
+        <div className="text-sm text-gray-500 dark:text-gray-400 italic py-2">
+          No feedback provided for images in this section.
+        </div>
+      )}
     </div>
   );
 };

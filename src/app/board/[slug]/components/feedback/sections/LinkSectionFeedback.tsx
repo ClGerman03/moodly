@@ -435,7 +435,7 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
   if (!links.length) {
     return (
       <div className="py-8 text-center text-gray-500">
-        Este tablero no contiene enlaces
+        This board has no links
       </div>
     );
   }
@@ -514,7 +514,7 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
               onSubmitComment={handleLinkCommentSubmit}
               onCancelComment={handleCancelComment}
               existingComments={getItemComments(activeLink.id)}
-              title="Deja un comentario sobre este enlace"
+              title="Leave a comment about this link"
             />
           ) : (
             <motion.div 
@@ -525,7 +525,7 @@ const LinkSectionFeedback: React.FC<LinkSectionFeedbackProps> = ({
               className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl"
             >
               <div className="text-sm text-gray-600 dark:text-gray-300">
-                ¿Qué opinas sobre este enlace?
+                What do you think about this link?
               </div>
               <FeedbackButtons 
                 onFeedback={handleLinkFeedback}
