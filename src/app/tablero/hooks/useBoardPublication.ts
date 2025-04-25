@@ -11,11 +11,25 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Estado guardado en sessionStorage
 interface StoredPublishState {
-  isChecking: boolean;
+  isPublishing: boolean;
   isPublished: boolean;
   slug: string;
   boardId: string;
   timestamp: number;
+}
+
+// Interfaces para manejar errores
+interface ErrorWithMessage {
+  message: string;
+}
+
+function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string'
+  );
 }
 
 interface UseBoardPublicationProps {
@@ -128,7 +142,7 @@ export function useBoardPublication({
         
       // Guardar el estado inicialmente
       savePublishState({
-        isChecking: true,
+        isPublishing: true,
         isPublished: false,
         slug: finalSlug,
         boardId,
@@ -173,7 +187,7 @@ export function useBoardPublication({
           
           // Actualizar estado
           savePublishState({
-            isChecking: false,
+            isPublishing: false,
             isPublished: true,
             slug: finalSlug,
             boardId,
@@ -183,20 +197,14 @@ export function useBoardPublication({
           return { success: true, slug: finalSlug, needsAuth: true };
         } catch (error) {
           console.error("Error preparing board for localStorage:", error);
-          toast.error(`Error preparing board: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
+          toast.error(`Error preparing board: ${isErrorWithMessage(error) ? error.message : "Unknown error"}`, { id: migrationToast });
           throw error;
         }
       }
       
-      // Para usuarios autenticados
-      // Verificar disponibilidad del slug en Supabase
-      const isAvailable = await boardService.isSlugAvailable(finalSlug);
-      if (!isAvailable) {
-        throw new Error("This URL is already taken. Please try a different one.");
-      }
-      
-      // Antes de publicar, procesar las imágenes del tablero
-      const migrationToast = toast.loading("Preparing board for publication...");
+      // Para usuarios autenticados: publicar directamente sin verificación previa
+      // Esto simplifica el flujo y elimina el paso de "checking"
+      const migrationToast = toast.loading("Publishing your board...");
       
       try {
         // Usar las secciones actuales del estado local
@@ -216,23 +224,41 @@ export function useBoardPublication({
         
         // Si el boardId es un valor por defecto, crear el tablero primero
         if (boardId === "mi-tablero" || !boardId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          const newBoard = await boardService.createBoard({
-            name: boardName,
-            slug: finalSlug,
-            user_id: (await supabase.auth.getUser()).data.user?.id || '',
-            is_published: true
-          });
-          finalBoardId = newBoard.id;
+          try {
+            const newBoard = await boardService.createBoard({
+              name: boardName,
+              slug: finalSlug,
+              user_id: (await supabase.auth.getUser()).data.user?.id || '',
+              is_published: true
+            });
+            finalBoardId = newBoard.id;
+          } catch (error: unknown) {
+            // Manejar errores específicamente para colisiones de slug
+            if (isErrorWithMessage(error) && 
+                (error.message.includes('duplicate key') || error.message.includes('already exists'))) {
+              toast.dismiss(migrationToast);
+              throw new Error("This URL is already taken. Please try a different one.");
+            }
+            throw error;
+          }
         }
         
         // Guardar las secciones procesadas
         await sectionService.saveSections(finalBoardId, processedSections as Section[]);
-        toast.success("Board published successfully", { id: migrationToast });
         
         // Publicar el tablero en Supabase si todavía no se ha hecho
         if (boardId !== finalBoardId) {
-          await boardService.publishBoard(finalBoardId, finalSlug);
+          try {
+            await boardService.publishBoard(finalBoardId, finalSlug);
+          } catch (error: unknown) {
+            // Si falla la publicación pero ya tenemos el tablero y secciones guardadas,
+            // podemos seguir considerándolo un éxito
+            console.warn("Error during final publish step, but data was saved:", 
+              isErrorWithMessage(error) ? error.message : "Unknown error");
+          }
         }
+        
+        toast.success("Board published successfully", { id: migrationToast });
         
         // Generar el enlace completo para compartir
         const baseUrl = window.location.origin;
@@ -241,7 +267,7 @@ export function useBoardPublication({
         
         // Actualizar estado
         savePublishState({
-          isChecking: false,
+          isPublishing: false,
           isPublished: true,
           slug: finalSlug,
           boardId: finalBoardId,
@@ -250,8 +276,8 @@ export function useBoardPublication({
         
         return { success: true, slug: finalSlug, needsAuth: false, boardLink: fullBoardLink };
       } catch (error) {
-        console.error("Error preparing board:", error);
-        toast.error(`Error preparing board: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
+        console.error("Error publishing board:", error);
+        toast.error(`Error publishing board: ${isErrorWithMessage(error) ? error.message : "Unknown error"}`, { id: migrationToast });
         throw error;
       }
     },
@@ -261,39 +287,65 @@ export function useBoardPublication({
       }
     },
     onError: (error) => {
-      setPublishingError(error instanceof Error ? error.message : "Unknown error occurred");
+      setPublishingError(isErrorWithMessage(error) ? error.message : "Unknown error occurred");
+      // Limpiar el estado en caso de error
+      savePublishState({
+        isPublishing: false,
+        isPublished: false,
+        slug: customUrlSegment,
+        boardId,
+        timestamp: Date.now()
+      });
     }
   });
   
-  // Verificar el estado actual de publicación
+  // Verificar el estado de publicación (simplificado)
   const checkPublicationStatus = useCallback(async (slug: string) => {
     try {
-      const isAvailable = await boardService.isSlugAvailable(slug);
-      if (!isAvailable) {
-        // Si el slug ya no está disponible, la publicación fue exitosa
-        const baseUrl = window.location.origin;
-        const fullBoardLink = `${baseUrl}/board/${slug}`;
-        setBoardLink(fullBoardLink);
-        publishMutation.reset();
-        onPublishSuccess(slug);
-        
-        // Actualizar el estado almacenado
-        savePublishState({
-          isChecking: false,
-          isPublished: true,
-          slug,
-          boardId,
-          timestamp: Date.now()
-        });
-      } else {
-        // El slug sigue disponible, la publicación no se completó
+      // Consideramos que si el enlace se generó correctamente, ya fue publicado
+      if (boardLink) {
+        return;
+      }
+      
+      // Intentar obtener el tablero por slug
+      try {
+        const board = await boardService.getBoardBySlug(slug);
+        if (board) {
+          // El tablero existe, por lo que consideramos que la publicación fue exitosa
+          const baseUrl = window.location.origin;
+          const fullBoardLink = `${baseUrl}/board/${slug}`;
+          setBoardLink(fullBoardLink);
+          publishMutation.reset();
+          onPublishSuccess(slug);
+          
+          // Actualizar el estado almacenado
+          savePublishState({
+            isPublishing: false,
+            isPublished: true,
+            slug,
+            boardId,
+            timestamp: Date.now()
+          });
+        } else {
+          // El tablero no existe, reiniciar el estado
+          publishMutation.reset();
+          savePublishState({
+            isPublishing: false,
+            isPublished: false,
+            slug,
+            boardId,
+            timestamp: Date.now()
+          });
+        }
+      } catch {
+        // Si hay un error al obtener el tablero, asumimos que aún no se ha publicado
         publishMutation.reset();
       }
     } catch (error) {
       console.error("Error checking publication status:", error);
       publishMutation.reset();
     }
-  }, [boardId, publishMutation, onPublishSuccess, savePublishState]);
+  }, [boardId, boardLink, publishMutation, onPublishSuccess, savePublishState]);
 
   // Comprobar el estado guardado al iniciar
   useEffect(() => {
@@ -316,7 +368,7 @@ export function useBoardPublication({
             onPublishSuccess(state.slug);
           } 
           // Si estaba en proceso y no completado, verificar estado actual
-          else if (state.isChecking) {
+          else if (state.isPublishing) {
             checkPublicationStatus(state.slug);
           }
         } else {
