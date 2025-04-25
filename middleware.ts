@@ -28,6 +28,7 @@ export async function middleware(req: NextRequest) {
   // Definir las áreas de la aplicación
   // 1. Rutas que requieren autenticación
   const PROTECTED_ROUTES = [
+    '/tablero',             // Acceso al tablero (requiere cuenta)
     '/tablero/guardar',     // Guardar un tablero (requiere cuenta)
     '/tablero/compartir',   // Compartir un tablero (requiere cuenta)
     '/perfil',              // Acceso al perfil de usuario
@@ -50,6 +51,7 @@ export async function middleware(req: NextRequest) {
   const isCallbackRoute = path.startsWith(CALLBACK_ROUTE);
   const isLogoutRoute = path === '/' && requestUrl.searchParams.get('logout') === 'true'; 
   const isDashboardRoute = path === '/dashboard';
+  const isTableroRoute = path === '/tablero';
   const isProtectedRoute = PROTECTED_ROUTES.some(route => path === route || path.startsWith(`${route}/`));
   const isAuthRoute = AUTH_ROUTES.some(route => path.startsWith(route)) && !isCallbackRoute;
 
@@ -59,8 +61,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // Comprobar explícitamente la ruta del dashboard para verificar si hay sesión
-  if (isDashboardRoute && !session) {
-    console.log(`Redirección de dashboard a auth: ${path} - sin sesión`);
+  if ((isDashboardRoute || isTableroRoute) && !session) {
+    console.log(`Redirección de ${path} a auth: sin sesión`);
     return NextResponse.redirect(new URL('/auth', requestUrl.origin));
   }
 

@@ -8,6 +8,7 @@ import ImageCarousel from "../layout/ImageCarousel";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import FeedbackButtons from "../shared/FeedbackButtons";
 import FeedbackIndicator from "../shared/FeedbackIndicator";
+import ImageMetadataOverlay from "../shared/ImageMetadataOverlay";
 import { useSectionFeedback } from "../hooks/useSectionFeedback";
 
 interface BentoImageFeedbackProps {
@@ -15,6 +16,9 @@ interface BentoImageFeedbackProps {
   onFeedback?: (sectionId: string, data: Record<string, unknown>) => void;
 }
 
+/**
+ * Componente para mostrar un carrusel de imágenes con overlay de metadatos y capacidad de feedback
+ */
 const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({ 
   section,
   onFeedback
@@ -23,17 +27,11 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const { isMobile } = useResponsiveLayout(containerRef);
   
-  // Estas variables no se utilizan en el componente actual, pero se mantienen 
-  // para futuros desarrollos o porque se usan en partes del código que no hemos modificado
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
-  const [tappedImage, setTappedImage] = useState<string | null>(null);
-  
-  // Estados para carrusel
+  // Estados para el carrusel
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   
-  // Utilizar el hook común para gestión de feedback
+  // Hook para gestión de feedback
   const {
     selectedItemForComment,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -53,18 +51,27 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
   const images = useMemo(() => section.data?.images || [], [section.data?.images]);
   const imageMetadata = useMemo(() => section.data?.imageMetadata || {}, [section.data?.imageMetadata]);
   
-  // Handlers para el carrusel
+  // Obtener la imagen actual y sus metadatos
+  const currentImage = images[currentImageIndex];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const currentImageMetadata = currentImage ? imageMetadata[currentImage] || {} : {};
+  const currentFeedback = currentImage ? getItemFeedback(currentImage) : undefined;
+  
+  // Metadata de la imagen seleccionada para comentario (modal)
+  const selectedImageMetadata = selectedItemForComment ? 
+    imageMetadata[selectedItemForComment] || {} : {};
+
+  // Ajustar altura del carrusel según el dispositivo
+  const carouselHeight = isMobile ? "h-[65vh]" : "h-[55vh]";
+  
+  // Handlers para navegación del carrusel
   const handleSwipe = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.x < -50) {
       setDirection(1);
-      setCurrentImageIndex(prev => 
-        prev < images.length - 1 ? prev + 1 : prev
-      );
+      setCurrentImageIndex(prev => Math.min(prev + 1, images.length - 1));
     } else if (info.offset.x > 50) {
       setDirection(-1);
-      setCurrentImageIndex(prev => 
-        prev > 0 ? prev - 1 : prev
-      );
+      setCurrentImageIndex(prev => Math.max(prev - 1, 0));
     }
   };
   
@@ -82,26 +89,12 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
     }
   };
 
-  // Esta función se define pero no se utiliza en el componente actual
-  // Se mantiene para futuros desarrollos o porque podría usarse en partes del código
-  // que no hemos modificado
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleImageTap = (imageUrl: string) => {
-    setTappedImage(imageUrl === tappedImage ? null : imageUrl);
-  };
-
-  // Obtener metadatos de la imagen seleccionada para comentario
-  const selectedImageMetadata = selectedItemForComment ? 
-    imageMetadata[selectedItemForComment] || null : null;
-
-  // Ajustar altura del carrusel según el dispositivo
-  const carouselHeight = isMobile ? "h-[70vh]" : "h-[60vh]";
-
   return (
-    <div className="py-4" ref={containerRef}>
-      {/* Carrusel de imágenes (tanto para móvil como desktop) */}
-      <div className={isMobile ? "mb-8" : "mb-4"}>
-        <div className={`relative ${carouselHeight} transition-all duration-300 max-w-4xl mx-auto`}>
+    <div className="py-6" ref={containerRef}>
+      {/* Carrusel de imágenes */}
+      <div className="max-w-4xl mx-auto">
+        {/* Contenedor del carrusel */}
+        <div className={`relative ${carouselHeight} transition-all duration-300`}>
           <ImageCarousel
             images={images}
             currentIndex={currentImageIndex}
@@ -113,62 +106,57 @@ const BentoImageFeedback: React.FC<BentoImageFeedbackProps> = ({
           >
             {(imageUrl: string) => {
               const metadata = imageMetadata[imageUrl] || {};
-              const reaction = getItemFeedback(imageUrl);
+              const hasFeedback = getItemFeedback(imageUrl);
+              const hasComments = getItemComments(imageUrl).length > 0;
               
               return (
-                <div 
-                  className="relative w-full h-full flex flex-col"
-                  onMouseEnter={() => !isMobile && setHoveredImage(imageUrl)}
-                  onMouseLeave={() => !isMobile && setHoveredImage(null)}
-                >
-                  {/* Contenedor principal de la imagen con metadata */}
-                  <div className="relative flex-grow">
-                    {/* Título de la imagen si existe */}
-                    {metadata.title && (
-                      <div className={`absolute top-0 left-0 right-0 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 text-sm text-center z-10`}>
-                        {metadata.title}
-                      </div>
-                    )}
-                    
-                    {/* Indicador de feedback activo animado */}
-                    {(reaction || getItemComments(imageUrl).length > 0) && (
-                      <div className="absolute top-3 right-3 z-10">
-                        <FeedbackIndicator 
-                          type={reaction || 'hasComments'} 
-                          hasComments={getItemComments(imageUrl).length > 0}
-                          size={16} 
-                          className="shadow-lg" 
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Botones de feedback en la parte inferior, siempre visibles */}
-                  <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center py-2 z-10">
-                    <div className="bg-white/20 backdrop-blur-md rounded-full px-3 py-1.5 shadow-sm">
-                      <FeedbackButtons
-                        onFeedback={(type) => handleItemFeedback(imageUrl, type)}
-                        currentFeedback={reaction}
-                        className="bg-transparent"
-                        allowComment={true}
-                        useMessageIcon={!isMobile}
+                <div className="relative h-full w-full">
+                  {/* Indicador de feedback si existe */}
+                  {(hasFeedback || hasComments) && (
+                    <div className="absolute top-3 right-3 z-20">
+                      <FeedbackIndicator 
+                        type={hasFeedback || 'hasComments'} 
+                        hasComments={hasComments}
+                        size={16} 
+                        className="shadow-lg" 
                       />
                     </div>
+                  )}
+                  
+                  {/* Overlay de metadatos */}
+                  <div className="absolute inset-0 z-10">
+                    <ImageMetadataOverlay 
+                      metadata={metadata}
+                      isMobile={isMobile}
+                    />
                   </div>
                 </div>
               );
             }}
           </ImageCarousel>
         </div>
+        
+        {/* Panel de feedback - siempre debajo del carrusel */}
+        <div className="mt-4 flex justify-center relative z-30">
+          <div className="bg-gray-50 dark:bg-gray-800/60 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm">
+            <FeedbackButtons
+              onFeedback={(type) => handleItemFeedback(currentImage, type)}
+              currentFeedback={currentFeedback}
+              className="bg-transparent"
+              allowComment={true}
+              useMessageIcon={true} /* Usar el mismo icono en ambas versiones */
+            />
+          </div>
+        </div>
       </div>
       
-      {/* Popup de comentarios */}
+      {/* Modal de comentarios */}
       {selectedItemForComment && (
         <ImageFeedbackContainer
           isOpen={!!selectedItemForComment}
           onClose={cancelComment}
           imageUrl={selectedItemForComment}
-          imageTitle={selectedImageMetadata?.title || ""}
+          imageTitle={selectedImageMetadata.title || ""}
           imageTags={[]}
           onSubmitComment={(comment) => {
             setCurrentComment(comment);

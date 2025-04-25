@@ -27,6 +27,7 @@ export interface LinkItem {
 export interface ImageMetadata {
   title?: string;
   description?: string;
+  tags?: string[];
 }
 
 export interface FontOption {

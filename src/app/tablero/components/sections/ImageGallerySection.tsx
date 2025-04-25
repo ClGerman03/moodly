@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { ImageMetadata } from "./gallery/types";
@@ -9,6 +9,7 @@ import ImageDetailPopup from "../popups/ImageDetailPopup";
 // Custom hooks import
 import { useDeviceDetection } from "../hooks/useDeviceDetection";
 import { useImageUpload } from "../hooks/useImageUpload";
+import { useImageMetadata } from "../../hooks/useImageMetadata";
 
 // Components import
 import MobileGallery from "./gallery/MobileGallery";
@@ -51,6 +52,15 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isDetailPopupOpen, setIsDetailPopupOpen] = useState<boolean>(false);
   
+  // Estado para mantener los metadatos actualizados mientras el popup está abierto
+  const [currentEditingMetadata, setCurrentEditingMetadata] = useState<ImageMetadata | null>(null);
+
+  // Usar nuestro hook personalizado para gestionar los metadatos
+  const { metadata, updateMetadata, getMetadata, removeMetadata } = useImageMetadata({
+    initialMetadata: imageMetadata,
+    onMetadataChange: onImageMetadataChange
+  });
+
   // Image loading management
   const { 
     handleDropFiles, 
@@ -64,7 +74,37 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     boardId 
   });
   
+  // Limpiar metadatos de imágenes eliminadas
+  useEffect(() => {
+    // Solo ejecutar esta limpieza cuando cambia la lista de imágenes
+    const currentUrls = new Set(images);
+    metadata.forEach((_, url) => {
+      if (!currentUrls.has(url)) {
+        removeMetadata(url);
+      }
+    });
+  }, [images, metadata, removeMetadata]);
+  
   // Event handlers for both views
+  
+  // Manejar la apertura del popup de detalles
+  const handleOpenDetailPopup = (index: number) => {
+    const imageUrl = images[index];
+    const currentMetadata = getMetadata(imageUrl);
+    
+    // Almacenar los metadatos actuales para asegurar que persistan
+    setCurrentEditingMetadata(currentMetadata);
+    setSelectedImageIndex(index);
+    setIsDetailPopupOpen(true);
+  };
+
+  // Manejar el cierre del popup de detalles
+  const handleCloseDetailPopup = () => {
+    // Limpiar el estado para evitar problemas de persistencia
+    setCurrentEditingMetadata(null);
+    setIsDetailPopupOpen(false);
+    setSelectedImageIndex(null);
+  };
   
   // Handle image click
   const handleImageClick = (index: number) => {
@@ -79,8 +119,7 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
       setTouchedImage(touchedImage === imageUrl ? null : imageUrl);
     } else {
       // On non-touch devices, open the popup directly
-      setSelectedImageIndex(index);
-      setIsDetailPopupOpen(true);
+      handleOpenDetailPopup(index);
     }
   };
   
@@ -133,7 +172,7 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
     }
   };
   
-  // Expand image
+  // Expand image - usar el nuevo mecanismo
   const handleImageExpand = (index: number, e?: React.MouseEvent) => {
     // Make sure to stop event propagation
     if (e) {
@@ -151,21 +190,32 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
       // 1. We are on desktop (not mobile)
       // 2. Or we are on mobile but the click came from the expand button specifically
       if (!isMobileDevice || isFromExpandButton) {
-        setSelectedImageIndex(index);
-        setIsDetailPopupOpen(true);
+        handleOpenDetailPopup(index);
       }
     } else if (!isMobileDevice) {
       // If there is no event (e) and we are not on mobile, we proceed normally
       // (this can occur in some programmatic cases)
-      setSelectedImageIndex(index);
-      setIsDetailPopupOpen(true);
+      handleOpenDetailPopup(index);
     }
   };
   
   // Remove image
   const handleImageRemove = (index: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    
+    // Eliminar metadatos asociados a la imagen
+    const imageUrl = images[index];
+    removeMetadata(imageUrl);
+    
+    // Propagar eliminación al componente padre
     onImageRemove(index);
+  };
+  
+  // Handle metadata updates
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleMetadataUpdate = (imageUrl: string, metadata: ImageMetadata) => {
+    // Update the local cache
+    updateMetadata(imageUrl, metadata);
   };
   
   return (
@@ -184,7 +234,7 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
         {isMobileDevice ? (
           <MobileGallery
             images={images}
-            imageMetadata={imageMetadata}
+            imageMetadata={metadata}
             hoveredImage={hoveredImage}
             touchedImage={touchedImage}
             isLiveMode={isLiveMode}
@@ -198,7 +248,7 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
         ) : (
           <DesktopGallery
             images={images}
-            imageMetadata={imageMetadata}
+            imageMetadata={metadata}
             hoveredImage={hoveredImage}
             touchedImage={touchedImage}
             activeId={activeId}
@@ -216,18 +266,18 @@ const ImageGallerySection: React.FC<ImageGallerySectionProps> = ({
         <AnimatePresence>
           {isDetailPopupOpen && selectedImageIndex !== null && (
             <ImageDetailPopup
+              key={`detail-${images[selectedImageIndex]}-${Date.now()}`} // Forzar remontaje completo cada vez
               isOpen={isDetailPopupOpen}
               imageUrl={images[selectedImageIndex]}
-              initialTitle={imageMetadata.get(images[selectedImageIndex])?.title || ''}
-              initialDescription={imageMetadata.get(images[selectedImageIndex])?.description || ''}
-              initialTags={imageMetadata.get(images[selectedImageIndex])?.tags || []}
-              onClose={() => {
-                setIsDetailPopupOpen(false);
-                setSelectedImageIndex(null);
-              }}
+              initialTitle={currentEditingMetadata?.title || ''}
+              initialDescription={currentEditingMetadata?.description || ''}
+              initialTags={currentEditingMetadata?.tags || []}
+              onClose={handleCloseDetailPopup}
               onSave={(title, description, tags) => {
                 if (selectedImageIndex !== null) {
-                  onImageMetadataChange(images[selectedImageIndex], { title, description, tags });
+                  const newMetadata = { title, description, tags };
+                  updateMetadata(images[selectedImageIndex], newMetadata);
+                  setCurrentEditingMetadata(newMetadata); // Actualizar metadatos actuales
                 }
               }}
               isLiveMode={isLiveMode}

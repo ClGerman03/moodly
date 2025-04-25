@@ -94,177 +94,129 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   onSave,
   isLiveMode = false,
 }) => {
-  // Los valores iniciales son directamente de las props
-  // Mantenemos las referencias separadas para simplicidad
-  
-  // Estados simplificados sin isSaving
+  // Estados simplificados
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [tags, setTags] = useState<string[]>(initialTags);
   const [editingTitle, setEditingTitle] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  const [lastSavedState, setLastSavedState] = useState({ title: initialTitle, description: initialDescription, tags: initialTags });
+  const [hasChanges, setHasChanges] = useState(false);
   
   // Detectar si es un dispositivo móvil
   const isMobile = useMediaQuery("(max-width: 768px)");
   const popupRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  // Simplificamos a un solo timeout para guardado
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Configuración del editor de texto enriquecido - simplificada al máximo
+  // Configuración del editor de texto enriquecido - simplificada
   const editor = useEditor({
     extensions: [StarterKit],
     content: initialDescription,
-    // Solución al error de SSR
-    immediatelyRender: false,
+    editable: !isLiveMode, // Asegurar que el editor sea editable si no estamos en modo live
+    immediatelyRender: false, // Evitar problemas de hidratación en SSR
+    onCreate: ({ editor }) => {
+      // Asegurarse de que el contenido inicial se carga correctamente
+      if (initialDescription) {
+        editor.commands.setContent(initialDescription);
+      }
+    },
     onUpdate: ({ editor }) => {
-      // Actualizar el estado local inmediatamente sin guardar automáticamente
       const html = editor.getHTML();
       setDescription(html);
+      setHasChanges(true);
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert focus:outline-none min-h-[200px] py-2 h-full',
+        class: 'prose prose-sm dark:prose-invert focus:outline-none min-h-[150px] py-2 h-full',
       },
     },
   });
 
-  // Manejar cambios cuando se activa/desactiva el modo live
+  // Inicializar valores cuando se abre el popup
   useEffect(() => {
-    if (editor) {
-      editor.setEditable(!isLiveMode);
-    }
-  }, [editor, isLiveMode]);
-  
-  // Manejar cambios en el estado del popup o la imagen - solo al montar o cuando cambia isOpen
-  useEffect(() => {
-    if (!isOpen) return;
-    
-    // Cuando el popup se abre por primera vez, configuramos todos los valores iniciales
-    if (!editingTitle) { // Solo si no estamos editando el título
+    if (isOpen) {
       setTitle(initialTitle || "");
+      setDescription(initialDescription || "");
       setTags(initialTags || []);
-      setLastSavedState({
-        title: initialTitle || "",
-        description: initialDescription || "",
-        tags: initialTags || []
-      });
+      setHasChanges(false);
       
       // Actualizar el contenido del editor si está disponible
       if (editor && editor.commands) {
-        editor.commands.setContent(initialDescription || '');
+        // Usar un pequeño timeout para evitar problemas de renderizado
+        setTimeout(() => {
+          editor.commands.setContent(initialDescription || '');
+        }, 10);
       }
-    }
-    
-    // Manejar navegación del botón atrás en dispositivos móviles
-    // Añadir un estado al historial para capturar el evento popstate
-    if (typeof window !== 'undefined' && !historyStateAdded) {
-      window.history.pushState({ popup: true }, "");
-      setHistoryStateAdded(true);
-    }
-    
-    // También resetear el estado de edición del título
-    setEditingTitle(false);
-    
-    // Limpiar cualquier timeout pendiente
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-    
-    // Auto-focus en el título solo si está vacío
-    const focusTimer = setTimeout(() => {
+      
+      // Auto-focus en el título solo si está vacío
       if (!initialTitle) {
-        setEditingTitle(true);
-        titleInputRef.current?.focus();
+        setTimeout(() => {
+          setEditingTitle(true);
+          titleInputRef.current?.focus();
+        }, 100);
       }
-    }, 100);
-    
-    // Limpiar el temporizador cuando se desmonte
-    return () => clearTimeout(focusTimer);
-    
-  }, [isOpen, imageUrl, initialTitle, initialDescription, editor, historyStateAdded, editingTitle, initialTags]); // dependencias necesarias
+    }
+  }, [isOpen, initialTitle, initialDescription, initialTags, editor]);
 
-  // Función muy simplificada para guardar cambios - solo cuando se llama explícitamente
-  const handleSaveChanges = useCallback(() => {
-    // Guardar los cambios actuales (sin comprobaciones extra)
+  // Marcar cambios cuando el título o tags se modifican
+  useEffect(() => {
+    if (isOpen && (title !== initialTitle || JSON.stringify(tags) !== JSON.stringify(initialTags))) {
+      setHasChanges(true);
+    }
+  }, [title, tags, initialTitle, initialTags, isOpen]);
+
+  // Función para guardar cambios
+  const handleSaveChanges = () => {
     onSave(title, description, tags);
-    
-    // Actualizamos el estado de último guardado
-    setLastSavedState({
-      title,
-      description,
-      tags
-    });
-  }, [title, description, tags, onSave]);
+    setHasChanges(false);
+    // Opcional: mostrar un mensaje de éxito
+  };
 
-  // Memoizamos handleClose para evitar recreaciones innecesarias
+  // Función para cerrar el popup sin guardar cambios
   const handleClose = useCallback(() => {
-    // Al cerrar, no guardamos los cambios
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    // Si añadimos una entrada al historial para este popup, volvemos atrás para que no se acumulen
-    if (historyStateAdded && typeof window !== 'undefined') {
-      window.history.back();
-    }
-    
     onClose();
-  }, [onClose, historyStateAdded]);
+  }, [onClose]);
+
+  // Función para detectar clics fuera del popup
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+      handleClose();
+    }
+  }, [handleClose, popupRef]);
+
+  // Función para detectar la tecla Escape
+  const handleEscKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      handleClose();
+    }
+  }, [handleClose]);
 
   // Handle click outside to close
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
-        handleClose();
-      }
-    };
-
-    // Handle escape key to close
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        handleClose();
-      }
-    };
-
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscKey);
     }
-
+    
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscKey);
     };
-  }, [isOpen, handleClose]);
+  }, [isOpen, hasChanges, handleClickOutside, handleEscKey]);
 
-  // Manejar el evento popstate (botón atrás del navegador)
-  useEffect(() => {
-    const handlePopState = () => {
-      if (isOpen && historyStateAdded) {
-        // Prevenir el comportamiento por defecto
-        handleClose();
-      }
-    };
+  // Manejar cambios en el título
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+    setHasChanges(true);
+  };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('popstate', handlePopState);
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('popstate', handlePopState);
-      }
-      
-      // Al desmontar, limpiar el estado del historial si fuimos nosotros quienes lo añadimos
-      if (historyStateAdded && isOpen) {
-        setHistoryStateAdded(false);
-      }
-    };
-  }, [isOpen, historyStateAdded, handleClose]);
+  // Manejar cuando se termina de editar el título
+  const handleTitleBlur = () => {
+    // Solo cambiar el estado de edición, sin guardar automáticamente
+    setEditingTitle(false);
+  };
 
   // If not open, don't render anything
   if (!isOpen) return null;
@@ -273,7 +225,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop con efecto mejorado */}
+          {/* Backdrop */}
           <motion.div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -282,7 +234,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           />
 
-          {/* Main popup container - Optimizado para móviles con animaciones mejoradas */}
+          {/* Main popup container */}
           <motion.div
             ref={popupRef}
             className="relative z-10 max-w-5xl w-[95%] sm:w-[90%] max-h-[95vh] md:max-h-[90vh] overflow-visible flex flex-col gap-4 md:flex-row md:gap-6"
@@ -296,34 +248,52 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
               mass: 0.8
             }}
           >
-            {/* Content section (left side) - Ahora como una tarjeta independiente */}
+            {/* Content section (left side) */}
             <div className="md:w-1/2 p-5 sm:p-6 md:p-7 flex flex-col h-full overflow-auto bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800">
+              
+              {/* Header con solo botón de guardado */}
+              <div className="flex justify-end mb-4">
+                {/* Botón de guardado negro */}
+                {!isLiveMode && (
+                  <button 
+                    onClick={handleSaveChanges}
+                    className={`px-4 py-1.5 text-sm font-medium transition-colors rounded-md flex items-center ${
+                      hasChanges 
+                        ? "text-white bg-gray-800 hover:bg-gray-700 shadow-sm" 
+                        : "text-gray-200 bg-gray-800 dark:text-gray-300 dark:bg-gray-800"
+                    }`}
+                  >
+                    {hasChanges ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        Save
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Saved
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
 
               <div className="flex flex-col flex-grow mt-6">
-                {/* Editable Title - Estilo similar a SectionManager */}
+                {/* Editable Title */}
                 {!isLiveMode && editingTitle ? (
                   <input
                     ref={titleInputRef}
                     type="text"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    onBlur={() => {
-                      // Evitar que se cierre inmediatamente cuando hacemos clic para editar
-                      // Solo cerramos si dejamos de enfocarlo o presionamos Enter/Escape
-                      setTimeout(() => {
-                        if (document.activeElement !== titleInputRef.current) {
-                          setEditingTitle(false);
-                          handleSaveChanges();
-                        }
-                      }, 100);
-                    }}
+                    onChange={handleTitleChange}
+                    onBlur={handleTitleBlur}
                     onKeyDown={(e: ReactKeyboardEvent<HTMLInputElement>) => {
                       if (e.key === 'Enter') {
-                        setEditingTitle(false);
-                        handleSaveChanges();
-                      } else if (e.key === 'Escape') {
-                        setTitle(lastSavedState.title); // Restaurar al valor guardado
-                        setEditingTitle(false);
+                        handleTitleBlur();
                       }
                     }}
                     className="text-2xl font-light bg-transparent focus:outline-none text-gray-700 dark:text-gray-300 w-full mb-6"
@@ -337,10 +307,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                     onClick={() => {
                       if (!isLiveMode) {
                         setEditingTitle(true);
-                        // Dar tiempo al DOM para que se actualice antes de enfocar
-                        setTimeout(() => {
-                          titleInputRef.current?.focus();
-                        }, 50);
+                        setTimeout(() => titleInputRef.current?.focus(), 50);
                       }
                     }}
                     whileHover={!isLiveMode ? { x: 2, color: '#3B82F6' } : undefined}
@@ -359,10 +326,10 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                     className={`prose prose-sm dark:prose-invert max-w-none h-full overflow-auto ${!isLiveMode ? 'focus:outline-none' : ''} text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500`}
                     spellCheck="false"
                   />
-                  {/* Verificamos si es string vacío o HTML con tags vacíos como <p></p> */}
+                  {/* Placeholder cuando no hay descripción - posición corregida */}
                   {(!description || description === '<p></p>' || description === '<p>&nbsp;</p>') && !isLiveMode && (
                     <motion.div 
-                      className="text-gray-400 dark:text-gray-500 italic text-sm mt-2 pointer-events-none absolute top-[9.5rem] left-5 sm:left-7 md:left-9"
+                      className="text-gray-400 dark:text-gray-500 italic text-sm mt-2 pointer-events-none absolute top-[12rem] left-5 sm:left-7 md:left-9"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3, duration: 0.3 }}
@@ -374,7 +341,7 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
               </div>
             </div>
 
-            {/* Image section (right side) - Ahora como una tarjeta independiente */}
+            {/* Image section (right side) */}
             <div className="md:w-1/2 p-0 relative overflow-visible">
               <motion.div
                 className="bg-white/90 dark:bg-gray-900/95 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-800 backdrop-blur-sm"
@@ -390,13 +357,15 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
                     <Image
                       src={imageUrl}
                       alt={title || "Selected image"}
-                      width={0}
-                      height={0}
+                      width={500} // Usar dimensiones fijas para mejorar la estabilidad
+                      height={300}
                       sizes="(max-width: 768px) 75vw, 50vw"
                       className="rounded-lg max-w-full max-h-[50vh] sm:max-h-[55vh] md:max-h-[65vh] h-auto w-auto object-contain"
                       style={{ objectFit: 'contain' }}
-                      priority
+                      priority={true}
                       unoptimized={imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')}
+                      loading="eager"
+                      onError={() => console.log("Error loading image")}
                     />
                     
                     {/* Overlay de etiquetas sutilmente visible sobre la imagen */}

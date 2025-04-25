@@ -56,6 +56,7 @@ export default function AuthForm() {
         <Link 
           href="/tablero" 
           className="w-full flex justify-center px-6 py-2.5 text-white bg-gray-800 hover:bg-gray-700 rounded-full font-light tracking-wide transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 opacity-90 hover:opacity-100"
+          style={{ display: 'none' }}
         >
           Continue without signing up
         </Link>

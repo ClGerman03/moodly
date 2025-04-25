@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Section } from './types';
 import { boardService, sectionService } from "@/services";
 import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function Tablero() {
   const [boardName, setBoardName] = useState<string>("");
@@ -30,6 +31,16 @@ export default function Tablero() {
   
   // Obtener el estado de autenticación
   const { user, isLoading } = useAuth();
+  const router = useRouter();
+  
+  // Efecto para redirigir al usuario si no está autenticado
+  useEffect(() => {
+    // Solo verificar después de que se haya completado la carga inicial
+    if (!isLoading && !user) {
+      console.log("Usuario no autenticado, redirigiendo a /auth");
+      router.replace("/auth");
+    }
+  }, [user, isLoading, router]);
   
   // Efecto para manejar el estado inicial según si el usuario está autenticado
   // Se ejecuta cuando isLoading cambia de true a false
@@ -204,93 +215,105 @@ export default function Tablero() {
 
   return (
     <div className="min-h-screen bg-white transition-all duration-500 ease-in-out">
-      {/* Pantalla para configurar el nombre del tablero - Con transición suave */}
-      <AnimatePresence>
-        {showNameForm && (
-          <motion.div 
-            className="flex flex-col items-center justify-center h-screen w-full max-w-md mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isTransitioning ? 0 : 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-          >
-            <h1 className="mb-6 text-2xl font-light text-gray-800 tracking-wide">
-              What will you name your board?
-            </h1>
-            <form onSubmit={handleNameSubmit} className="w-full space-y-4">
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  value={boardName}
-                  onChange={(e) => setBoardName(e.target.value)}
-                  placeholder="Enter a name"
-                  className="w-full py-2 text-xl text-center text-gray-700 placeholder-gray-300/70 bg-transparent outline-none focus:outline-none focus:ring-0 focus:shadow-none transition-all duration-300"
-                  autoFocus
-                  style={{ outline: 'none' }}
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-auto px-5 py-1.5 mt-4 text-sm font-medium text-white transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transform hover:scale-102 opacity-90 hover:opacity-100 flex items-center justify-center mx-auto"
+      {/* Mostrar loading state mientras se verifica la autenticación */}
+      {isLoading || (!user && typeof window !== "undefined") ? (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center p-8">
+            <p className="text-gray-600 mb-2">Verificando sesión...</p>
+            <div className="w-10 h-10 border-t-2 border-gray-500 rounded-full animate-spin mx-auto"></div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Pantalla para configurar el nombre del tablero - Con transición suave */}
+          <AnimatePresence>
+            {showNameForm && (
+              <motion.div 
+                className="flex flex-col items-center justify-center h-screen w-full max-w-md mx-auto"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isTransitioning ? 0 : 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
               >
-                Start
-              </button>
-            </form>
-          </motion.div>
-        )}
+                <h1 className="mb-6 text-2xl font-light text-gray-800 tracking-wide">
+                  What will you name your board?
+                </h1>
+                <form onSubmit={handleNameSubmit} className="w-full space-y-4">
+                  <div className="relative w-full">
+                    <input
+                      type="text"
+                      value={boardName}
+                      onChange={(e) => setBoardName(e.target.value)}
+                      placeholder="Enter a name"
+                      className="w-full py-2 text-xl text-center text-gray-700 placeholder-gray-300/70 bg-transparent outline-none focus:outline-none focus:ring-0 focus:shadow-none transition-all duration-300"
+                      autoFocus
+                      style={{ outline: 'none' }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-auto px-5 py-1.5 mt-4 text-sm font-medium text-white transition-all duration-300 rounded-full bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transform hover:scale-102 opacity-90 hover:opacity-100 flex items-center justify-center mx-auto"
+                  >
+                    Start
+                  </button>
+                </form>
+              </motion.div>
+            )}
 
-        {/* Mensaje de bienvenida con animación */}
-        {showWelcome && (
-          <motion.div 
-            className="flex flex-col items-center justify-center h-screen w-full"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isTransitioning ? 0 : 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
-          >
-            <h1 className="text-3xl font-light text-gray-800">
-              {user ? `Welcome, ${user.email?.split('@')[0]}` : "Welcome"}
-            </h1>
-          </motion.div>
-        )}
+            {/* Mensaje de bienvenida con animación */}
+            {showWelcome && (
+              <motion.div 
+                className="flex flex-col items-center justify-center h-screen w-full"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isTransitioning ? 0 : 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+              >
+                <h1 className="text-3xl font-light text-gray-800">
+                  {user ? `Welcome, ${user.email?.split('@')[0]}` : "Welcome"}
+                </h1>
+              </motion.div>
+            )}
 
-        {/* Pantalla del tablero con transición suave */}
-        {isNameSet && (
-          <motion.div 
-            className="w-full max-w-6xl mx-auto p-6 pt-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isTransitioning ? 0 : 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-light text-gray-800 dark:text-gray-100">
-                {boardName}
-              </h1>
-              <ConfigPanel 
-                onShare={handleOpenSharePopup}
-              />
-            </div>
-            
-            {/* Gestor de secciones */}
-            <SectionManager 
-              fileInputRef={fileInputRef}
-              ref={sectionManagerRef}
-              boardId={currentBoardId || `temp-${Date.now().toString()}`} // Usar ID actual o generar uno temporal
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {/* Pantalla del tablero con transición suave */}
+            {isNameSet && (
+              <motion.div 
+                className="w-full max-w-6xl mx-auto p-6 pt-10"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isTransitioning ? 0 : 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-3xl font-light text-gray-800 dark:text-gray-100">
+                    {boardName}
+                  </h1>
+                  <ConfigPanel 
+                    onShare={handleOpenSharePopup}
+                  />
+                </div>
+                
+                {/* Gestor de secciones */}
+                <SectionManager 
+                  fileInputRef={fileInputRef}
+                  ref={sectionManagerRef}
+                  boardId={currentBoardId || `temp-${Date.now().toString()}`} // Usar ID actual o generar uno temporal
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* Popup para compartir el tablero */}
-      <SharePopup
-        isOpen={isSharePopupOpen}
-        onClose={() => setIsSharePopupOpen(false)}
-        boardName={boardName}
-        boardId={currentBoardId || publishedSlug || boardName.toLowerCase().replace(/\s+/g, '-')}
-        currentSections={currentSections}
-        onPublish={handlePublishBoard}
-      />
+          {/* Popup para compartir el tablero */}
+          <SharePopup
+            isOpen={isSharePopupOpen}
+            onClose={() => setIsSharePopupOpen(false)}
+            boardName={boardName}
+            boardId={currentBoardId || publishedSlug || boardName.toLowerCase().replace(/\s+/g, '-')}
+            currentSections={currentSections}
+            onPublish={handlePublishBoard}
+          />
+        </>
+      )}
     </div>
   );
 }

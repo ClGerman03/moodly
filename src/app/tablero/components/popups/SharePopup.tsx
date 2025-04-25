@@ -169,7 +169,8 @@ const SharePopup: React.FC<SharePopupProps> = ({
                           const rawValue = value as Record<string, unknown>;
                           typedMetadata[key] = {
                             title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
-                            description: typeof rawValue.description === 'string' ? rawValue.description : undefined
+                            description: typeof rawValue.description === 'string' ? rawValue.description : undefined,
+                            tags: Array.isArray(rawValue.tags) ? rawValue.tags : []
                           };
                         }
                       });
@@ -291,7 +292,8 @@ const SharePopup: React.FC<SharePopupProps> = ({
                         const rawValue = value as Record<string, unknown>;
                         typedMetadata[key] = {
                           title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
-                          description: typeof rawValue.description === 'string' ? rawValue.description : undefined
+                          description: typeof rawValue.description === 'string' ? rawValue.description : undefined,
+                          tags: Array.isArray(rawValue.tags) ? rawValue.tags : []
                         };
                       }
                     });
