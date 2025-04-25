@@ -1,15 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LucideCheck, LucideX } from "lucide-react";
-import { boardService, sectionService } from "@/services";
-import { storageService } from "@/services/storageService";
-import { toast } from "react-hot-toast";
-import { Section, ImageMetadata } from "@/app/tablero/types";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
-import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { Section } from "@/app/tablero/types";
+import { useBoardPublication } from "@/app/tablero/hooks/useBoardPublication";
+import { PublishForm } from "./PublishForm";
 
 interface SharePopupProps {
   isOpen: boolean;
@@ -31,29 +26,28 @@ const SharePopup: React.FC<SharePopupProps> = ({
   currentSections = [], // Usar secciones actuales del estado local
   onPublish
 }) => {
-  // Obtener el estado de autenticación
-  const { user } = useAuth();
-  
-  // Estado para la URL personalizada
-  const [customUrlSegment, setCustomUrlSegment] = useState(() => {
-    // Generar un slug basado en el nombre del tablero
-    return boardName
-      ? boardName.toLowerCase()
-          .trim()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .replace(/\s+/g, '-')
-      : boardId
-  });
-  const [showUrlSuccess, setShowUrlSuccess] = useState(false);
-  const [publishingError, setPublishingError] = useState<string | null>(null);
-  const [isPublished, setIsPublished] = useState(false);
   const [historyStateAdded, setHistoryStateAdded] = useState(false);
-  const [boardLink, setBoardLink] = useState<string>("");
-  const [isChecking, setIsChecking] = useState(false);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   
   // Referencias para detectar clics fuera del popup
   const popupRef = useRef<HTMLDivElement>(null);
+  
+  // Usar el hook de publicación 
+  const {
+    customUrlSegment,
+    setCustomUrlSegment,
+    boardLink,
+    showAuthPrompt,
+    publishingError,
+    isPublishing,
+    isPublished,
+    publish,
+    reset
+  } = useBoardPublication({
+    boardName,
+    boardId,
+    currentSections,
+    onPublishSuccess: onPublish
+  });
   
   // Cerrar popup con escape o clic fuera
   useEffect(() => {
@@ -110,268 +104,15 @@ const SharePopup: React.FC<SharePopupProps> = ({
     };
   }, [isOpen, historyStateAdded, onClose]);
   
-  // Publicar tablero con URL personalizada
-  const handlePublish = async () => {
-    try {
-      // Verificar que el slug sea válido
-      if (!customUrlSegment || customUrlSegment.trim() === "") {
-        setPublishingError("Please enter a valid name for the URL");
-        return;
+  // Limpiar recursos al cerrar
+  useEffect(() => {
+    if (!isOpen) {
+      // Resetear estados si el popup se cierra y la publicación no se ha completado
+      if (!isPublished && isPublishing) {
+        reset();
       }
-      
-      // Slug normalizado
-      const finalSlug = customUrlSegment
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-');
-      
-      // Verificar si el usuario está autenticado
-      if (!user) {
-        // Usuario no autenticado - guardamos en localStorage y mostramos mensaje
-        const migrationToast = toast.loading("Preparing board for local storage...");
-        
-        try {
-          // Procesar las imágenes como siempre
-          if (!currentSections || currentSections.length === 0) {
-            toast.dismiss(migrationToast);
-            setIsChecking(false);
-            setPublishingError("No sections found for this board");
-            return;
-          }
-
-          // Procesar cada sección para migrar las imágenes
-          const processedSections = await Promise.all(
-            currentSections.map(async (section) => {
-              // Procesamiento específico para cada tipo de sección
-              switch(section.type) {
-                case 'imageGallery':
-                  try {
-                    // Crear un formato compatible con processSectionImages
-                    const sectionToProcess = {
-                      type: section.type,
-                      data: section.data
-                    };
-                    
-                    // Usar directamente el procesador de imágenes del storageService
-                    const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
-                    
-                    // Asegurar que imageMetadata sea del tipo correcto
-                    const typedData = { ...processedSection.data };
-                    
-                    // Convertir los metadatos de imagen al tipo esperado
-                    if (typedData.imageMetadata) {
-                      const typedMetadata: { [key: string]: ImageMetadata } = {};
-                      
-                      // Convertir cada entrada de metadatos al tipo ImageMetadata
-                      Object.entries(typedData.imageMetadata).forEach(([key, value]) => {
-                        if (value && typeof value === 'object') {
-                          const rawValue = value as Record<string, unknown>;
-                          typedMetadata[key] = {
-                            title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
-                            description: typeof rawValue.description === 'string' ? rawValue.description : undefined,
-                            tags: Array.isArray(rawValue.tags) ? rawValue.tags : []
-                          };
-                        }
-                      });
-                      
-                      typedData.imageMetadata = typedMetadata;
-                    }
-                    
-                    return {
-                      ...section,
-                      data: typedData
-                    };
-                  } catch (error) {
-                    console.error(`Error processing images for section ${section.id}:`, error);
-                    // Continuar con otras secciones incluso si esta falla
-                    return section;
-                  }
-                
-                // Otros tipos de secciones son pasados directamente sin procesamiento
-                case 'links':
-                case 'text':
-                case 'typography':
-                case 'palette':
-                default:
-                  console.log(`Processing section of type ${section.type} (id: ${section.id})`);
-                  return section;
-              }
-            })
-          );
-          
-          // Guardar en localStorage con el formato adecuado
-          const pendingBoardData = {
-            name: boardName,
-            slug: finalSlug,
-            sections: processedSections,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            pendingPublication: true
-          };
-          
-          // Guardar en localStorage
-          localStorage.setItem('moodly-pending-board', JSON.stringify(pendingBoardData));
-          
-          toast.success("Board saved locally. Sign in to publish!", { id: migrationToast });
-          
-          // Mostrar el prompt de autenticación
-          setShowAuthPrompt(true);
-          setShowUrlSuccess(true);
-          setIsPublished(true);
-          
-          // Notificar al componente padre
-          onPublish(finalSlug);
-        } catch (error) {
-          console.error("Error preparing board for localStorage:", error);
-          toast.error(`Error preparing board: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
-          setPublishingError("Error preparing board. Please try again.");
-          return;
-        }
-        
-        return;
-      }
-      
-      // A partir de aquí continúa el código original para usuarios autenticados
-      // Verificar disponibilidad del slug en Supabase
-      setIsChecking(true);
-      try {
-        const isAvailable = await boardService.isSlugAvailable(finalSlug);
-        if (!isAvailable) {
-          setPublishingError("This URL is already taken. Please try a different one.");
-          setIsChecking(false);
-          return;
-        }
-      } catch (error) {
-        console.error("Error checking slug availability:", error);
-        setPublishingError("Error checking URL availability. Please try again.");
-        setIsChecking(false);
-        return;
-      }
-      
-      // Antes de publicar, procesar las imágenes del tablero
-      const migrationToast = toast.loading("Preparing board for publication...");
-      
-      try {
-        // Usar las secciones actuales del estado local en lugar de obtenerlas de la base de datos
-        if (!currentSections || currentSections.length === 0) {
-          toast.dismiss(migrationToast);
-          setIsChecking(false);
-          setPublishingError("No sections found for this board");
-          return;
-        }
-        
-        // Procesar cada sección para migrar las imágenes
-        // Siempre asumimos cambios para simplificar el flujo
-        // const hasChanges = true; // Variable no utilizada en la lógica actual
-        const processedSections = await Promise.all(
-          currentSections.map(async (section) => {
-            // Procesamiento específico para cada tipo de sección
-            switch(section.type) {
-              case 'imageGallery':
-                try {
-                  // Crear un formato compatible con processSectionImages
-                  const sectionToProcess = {
-                    type: section.type,
-                    data: section.data
-                  };
-                  
-                  // Usar directamente el procesador de imágenes del storageService
-                  const processedSection = await storageService.processSectionImages(sectionToProcess, boardId);
-                  
-                  // Asegurar que imageMetadata sea del tipo correcto
-                  const typedData = { ...processedSection.data };
-                  
-                  // Convertir los metadatos de imagen al tipo esperado
-                  if (typedData.imageMetadata) {
-                    const typedMetadata: { [key: string]: ImageMetadata } = {};
-                    
-                    // Convertir cada entrada de metadatos al tipo ImageMetadata
-                    Object.entries(typedData.imageMetadata).forEach(([key, value]) => {
-                      if (value && typeof value === 'object') {
-                        const rawValue = value as Record<string, unknown>;
-                        typedMetadata[key] = {
-                          title: typeof rawValue.title === 'string' ? rawValue.title : undefined,
-                          description: typeof rawValue.description === 'string' ? rawValue.description : undefined,
-                          tags: Array.isArray(rawValue.tags) ? rawValue.tags : []
-                        };
-                      }
-                    });
-                    
-                    typedData.imageMetadata = typedMetadata;
-                  }
-                  
-                  return {
-                    ...section,
-                    data: typedData
-                  };
-                } catch (error) {
-                  console.error(`Error processing images for section ${section.id}:`, error);
-                  // Continuar con otras secciones incluso si esta falla
-                  return section;
-                }
-              
-              // Otros tipos de secciones son pasados directamente sin procesamiento
-              case 'links':
-              case 'text':
-              case 'typography':
-              case 'palette':
-              default:
-                console.log(`Processing section of type ${section.type} (id: ${section.id})`);
-                return section;
-            }
-          })
-        );
-        
-        // Declarar finalBoardId fuera del bloque condicional
-        let finalBoardId = boardId;
-        
-        // Si el boardId es un valor por defecto, crear el tablero primero
-        if (boardId === "mi-tablero" || !boardId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          const newBoard = await boardService.createBoard({
-            name: boardName,
-            slug: finalSlug,
-            user_id: (await supabase.auth.getUser()).data.user?.id || '',
-            is_published: true
-          });
-          finalBoardId = newBoard.id;
-        }
-        
-        // Guardar las secciones (procesadas o no)
-        await sectionService.saveSections(finalBoardId, processedSections as Section[]);
-        toast.success("Board published successfully", { id: migrationToast });
-        
-        // Publicar el tablero en Supabase si todavía no se ha hecho
-        if (boardId !== finalBoardId) {
-          await boardService.publishBoard(finalBoardId, finalSlug);
-        }
-        
-        // Generar el enlace completo para compartir
-        const baseUrl = window.location.origin;
-        const fullBoardLink = `${baseUrl}/board/${finalSlug}`;
-        setBoardLink(fullBoardLink);
-        
-        // Actualizar estado y mostrar mensaje de éxito
-        setShowUrlSuccess(true);
-        setIsPublished(true);
-        
-        // Notificar al componente padre
-        onPublish(finalSlug);
-      } catch (error) {
-        console.error("Error preparing board:", error);
-        toast.error(`Error preparing board: ${error instanceof Error ? error.message : "Unknown error"}`, { id: migrationToast });
-        setPublishingError("Error preparing board. Please try again.");
-        setIsChecking(false);
-        return;
-      }
-      
-      setIsChecking(false);
-    } catch (error) {
-      console.error("Error publishing board:", error);
-      setPublishingError(`Error publishing board: ${error instanceof Error ? error.message : "Unknown error"}`);
-      setIsChecking(false);
     }
-  };
+  }, [isOpen, isPublished, isPublishing, reset]);
 
   return (
     <AnimatePresence>
@@ -401,120 +142,39 @@ const SharePopup: React.FC<SharePopupProps> = ({
               </h3>
               <button
                 onClick={onClose}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-700"
+                className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
               >
-                <LucideX size={18} />
+                <span className="sr-only">Close</span>
+                <svg
+                  className="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </div>
             
-            {/* Content */}
-            <div className="p-4 space-y-4">
-              {/* Sección de URL personalizada */}
-              <div className="flex flex-col mb-2">
-                <label htmlFor="custom-url" className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                  Custom URL
-                </label>
-                <div className="flex">
-                  <div className="flex-shrink-0 flex items-center px-3 bg-gray-50 dark:bg-gray-800 border-r-0 border-0 rounded-l-md text-sm text-gray-500 dark:text-gray-400">
-                    {window.location.origin}/board/
-                  </div>
-                  <input
-                    id="custom-url"
-                    type="text"
-                    value={customUrlSegment}
-                    onChange={(e) => setCustomUrlSegment(e.target.value.replace(/\s+/g, '-'))}
-                    className="flex-1 px-3 py-2 text-sm rounded-r-md border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
-                    placeholder="mi-tablero"
-                  />
-                </div>
-              </div>
-              
-              {/* Mensaje de error de publicación */}
-              {publishingError && (
-                <div className="p-2 mb-1 text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md">
-                  {publishingError}
-                </div>
-              )}
-              
-              {/* Mensaje de éxito */}
-              <AnimatePresence>
-                {showUrlSuccess && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-2 mb-1 text-xs flex items-center text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md"
-                  >
-                    <LucideCheck size={14} className="mr-1.5" />
-                    {showAuthPrompt 
-                      ? "Board ready! Sign in to publish it."
-                      : "Board published successfully!"}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {/* Prompt de autenticación para usuarios no autenticados */}
-              {showAuthPrompt && (
-                <div className="mt-4 p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    Your board is almost ready! Sign in with Google to publish and share it with others.
-                  </p>
-                  <GoogleSignInButton text="Sign in with Google" />
-                </div>
-              )}
-              
-              {/* Botón de publicar */}
-              <button
-                onClick={handlePublish}
-                disabled={isChecking || isPublished}
-                className={`w-full py-2 px-4 rounded-md transition-colors ${
-                  isPublished
-                    ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                    : isChecking
-                    ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 cursor-wait"
-                    : "bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
-                }`}
-              >
-                {isPublished
-                  ? "Published"
-                  : isChecking
-                  ? "Checking..."
-                  : "Publish Board"}
-              </button>
-
-              {/* Enlace para compartir */}
-              {isPublished && boardLink && (
-                <div className="mt-4">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                    Share this link with others:
-                  </div>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      value={boardLink}
-                      readOnly
-                      className="flex-1 px-3 py-2 text-sm rounded-l-md border-0 outline-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-                    />
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(boardLink);
-                        // Feedback visual (opcional)
-                        const copyBtn = document.activeElement as HTMLButtonElement;
-                        if (copyBtn) {
-                          const originalText = copyBtn.textContent;
-                          copyBtn.textContent = "Copied!";
-                          setTimeout(() => {
-                            copyBtn.textContent = originalText;
-                          }, 2000);
-                        }
-                      }}
-                      className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-r-md"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* Body */}
+            <div className="px-4 py-4">
+              <PublishForm
+                customUrlSegment={customUrlSegment}
+                setCustomUrlSegment={setCustomUrlSegment}
+                boardLink={boardLink}
+                showAuthPrompt={showAuthPrompt}
+                publishingError={publishingError}
+                isPublishing={isPublishing}
+                isPublished={isPublished}
+                onPublish={publish}
+              />
             </div>
             
             {/* Footer */}
