@@ -13,6 +13,21 @@ import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/supabase'
 import { getCachedProfile, cacheProfile, clearProfileCache } from '@/lib/profileCache'
 
+// Ambiente de desarrollo
+const isDev = process.env.NODE_ENV === 'development';
+
+// Función segura para logging que solo muestra en desarrollo
+const safeLog = (message: string, ...optionalParams: unknown[]) => {
+  if (isDev) {
+    console.log(message, ...optionalParams);
+  }
+};
+
+// Función segura para errores que siempre se muestran
+const safeError = (message: string, ...optionalParams: unknown[]) => {
+  console.error(message, ...optionalParams);
+};
+
 // Tipo para el perfil de usuario
 type ProfileType = Database['public']['Tables']['profiles']['Row']
 
@@ -51,11 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Comprobar si ya tenemos el perfil en caché
       const cachedProfile = getCachedProfile(userId);
       if (cachedProfile) {
-        console.log('Usando perfil desde caché');
+        safeLog('Usando perfil desde caché');
         return cachedProfile;
       }
       
-      console.log('Obteniendo perfil desde Supabase');
+      safeLog('Obteniendo perfil desde Supabase');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -63,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
       
       if (error) {
-        console.error('Error al cargar el perfil:', error)
+        safeError('Error al cargar el perfil:', error)
         return null;
       } 
       
@@ -75,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return null;
     } catch (err) {
-      console.error('Error inesperado al obtener perfil:', err);
+      safeError('Error inesperado al obtener perfil:', err);
       return null;
     }
   }
@@ -85,13 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user || isRefreshingProfile.current) return;
     
     try {
-      console.log('Actualizando perfil del usuario manualmente...');
+      safeLog('Actualizando perfil del usuario manualmente...');
       isRefreshingProfile.current = true;
       const fetchedProfile = await fetchProfileFromSupabase(user.id);
       
       if (fetchedProfile) {
         setProfile(fetchedProfile);
-        console.log('Perfil actualizado correctamente');
+        safeLog('Perfil actualizado correctamente');
       }
     } finally {
       isRefreshingProfile.current = false;
@@ -118,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error
       }
     } catch (error) {
-      console.error('Error al iniciar sesión con Google:', error)
+      safeError('Error al iniciar sesión con Google:', error)
     }
   }
 
@@ -142,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.location.href = '/?logout=true';
       
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      safeError('Error al cerrar sesión:', error);
       setIsLoading(false); // Restablecer el estado de carga en caso de error
       throw error; // Re-lanzar el error para manejo externo
     }
@@ -152,86 +167,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     setIsLoading(true);
     
-    // Definir fetchInitialSession dentro del useEffect para evitar tenerlo como dependencia
-    const fetchInitialSession = async () => {
-      console.log('Obteniendo sesión inicial...');
+    async function fetchInitialSession() {
+      // Definir fetchInitialSession dentro del useEffect para evitar tenerlo como dependencia
+      safeLog('Intentando obtener sesión inicial');
       
       // Función para reintentar la carga de sesión si falla
-      const retryFetchSession = () => {
-        if (retryAttemptsRef.current < maxRetryAttempts) {
-          retryAttemptsRef.current += 1;
-          console.log(`Reintentando cargar sesión... (intento ${retryAttemptsRef.current}/${maxRetryAttempts})`);
-          
+      async function retryFetchSession() {
+        if (retryAttemptsRef.current < maxRetryAttempts && isMounted) {
           const delay = Math.pow(2, retryAttemptsRef.current) * 1000; // Backoff exponencial
-          timeoutRef.current = setTimeout(() => {
-            if (isMounted) {
-              fetchInitialSession();
-            }
+          safeLog(`Reintentando obtener sesión en ${delay}ms (intento ${retryAttemptsRef.current + 1}/${maxRetryAttempts})`);
+          
+          timeoutRef.current = setTimeout(async () => {
+            retryAttemptsRef.current += 1;
+            await fetchInitialSession();
           }, delay);
-        } else {
+        } else if (isMounted) {
+          safeError('Número máximo de reintentos alcanzado');
           setIsLoading(false);
-          setAuthError('No se pudo conectar al servidor de autenticación');
+          setAuthError('No se pudo cargar la sesión después de varios intentos');
         }
-      };
-    
+      }
+      
       try {
         const { data, error } = await supabase.auth.getSession();
+        
+        // Verificar si componente sigue montado antes de actualizar estado
+        if (!isMounted) return;
         
         if (error) {
           throw error;
         }
         
-        if (!isMounted) return;
-        
-        if (data.session) {
-          console.log('Sesión inicial encontrada');
+        if (data?.session) {
+          safeLog('Sesión inicial encontrada');
           setSession(data.session);
+          setUser(data.session.user);
           
-          // Cargar usuario desde sesión
-          const currentUser = data.session.user;
-          setUser(currentUser);
+          // Ahora intentamos obtener el perfil
+          safeLog('Obteniendo perfil para sesión inicial');
+          const fetchedProfile = await fetchProfileFromSupabase(data.session.user.id);
           
-          // Intentar cargar perfil desde caché primero
-          if (currentUser) {
-            const cachedProfile = getCachedProfile(currentUser.id);
-            
-            if (cachedProfile) {
-              console.log('Usando perfil en caché para sesión inicial');
-              setProfile(cachedProfile);
-              setIsLoading(false);
-            } else {
-              // Si no está en caché, obtenemos de Supabase
-              console.log('Obteniendo perfil para sesión inicial');
-              try {
-                const profile = await fetchProfileFromSupabase(currentUser.id);
-                
-                if (!isMounted) return;
-                
-                if (profile) {
-                  setProfile(profile);
-                }
-                
-                setIsLoading(false);
-              } catch (profileError) {
-                console.error('Error al cargar el perfil inicial:', profileError);
-                if (isMounted) {
-                  setIsLoading(false);
-                }
-              }
-            }
-          } else {
-            if (isMounted) {
-              setIsLoading(false);
-            }
+          // Verificar nuevamente si el componente sigue montado
+          if (isMounted && fetchedProfile) {
+            setProfile(fetchedProfile);
           }
-        } else {
-          console.log('No hay sesión inicial');
-          setIsLoading(false);
         }
         
-        setAuthError(null);
+        // Marcar carga inicial como completada
+        if (isMounted) {
+          setIsLoading(false);
+        }
       } catch (err) {
-        console.error('Error al obtener sesión inicial:', err);
+        safeError('Error al obtener sesión inicial:', err);
         if (isMounted) {
           retryFetchSession();
         }
@@ -254,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Suscribirse a los cambios de autenticación - solo una vez
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log(`Evento de autenticación: ${event}`);
+        safeLog(`Evento de autenticación: ${event}`);
         
         // Verificar que el componente aún esté montado antes de actualizar el estado
         if (!isMounted) return;
@@ -267,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Actualizamos los estados basados en el evento
         if (event === 'SIGNED_IN') {
-          console.log('Usuario ha iniciado sesión');
+          safeLog('Usuario ha iniciado sesión');
           setIsLoading(true); // Marcar como cargando mientras procesamos
           
           try {
@@ -278,11 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               // Intento usar caché primero
               const cachedProfile = getCachedProfile(newUser.id);
               if (cachedProfile) {
-                console.log('Usando perfil en caché para SIGNED_IN');
+                safeLog('Usando perfil en caché para SIGNED_IN');
                 setProfile(cachedProfile);
               } else {
                 // Solo hacemos una llamada a la API si no está en caché
-                console.log('Obteniendo perfil tras SIGNED_IN');
+                safeLog('Obteniendo perfil tras SIGNED_IN');
                 const fetchedProfile = await fetchProfileFromSupabase(newUser.id);
                 if (fetchedProfile && isMounted) {
                   setProfile(fetchedProfile);
@@ -290,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             }
           } catch (error) {
-            console.error('Error procesando evento SIGNED_IN:', error);
+            safeError('Error procesando evento SIGNED_IN:', error);
           } finally {
             if (isMounted) {
               setIsLoading(false);
@@ -298,14 +285,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } 
         else if (event === 'SIGNED_OUT') {
-          console.log('Usuario ha cerrado sesión');
+          safeLog('Usuario ha cerrado sesión');
           setSession(null);
           setUser(null);
           setProfile(null);
           clearProfileCache();
         }
         else if (event === 'USER_UPDATED' && newUser) {
-          console.log('Usuario actualizado, refrescando perfil');
+          safeLog('Usuario actualizado, refrescando perfil');
           setSession(newSession);
           setUser(newUser);
           
@@ -321,7 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Limpiar suscripción al desmontar y marcar componente como desmontado
     return () => {
-      console.log('Limpiando suscripción de autenticación');
+      safeLog('Limpiando suscripción de autenticación');
       isMounted = false;
       subscription.unsubscribe();
       

@@ -8,14 +8,23 @@
 
 import { Database } from '@/types/supabase';
 
+// Ambiente de desarrollo
+const isDev = process.env.NODE_ENV === 'development';
+
+// Función segura para logging que solo muestra en desarrollo
+const safeLog = (message: string, ...optionalParams: unknown[]) => {
+  if (isDev) {
+    console.log(message, ...optionalParams);
+  }
+};
+
+// Función segura para errores que siempre se muestran
+const safeError = (message: string, ...optionalParams: unknown[]) => {
+  console.error(message, ...optionalParams);
+};
+
 // Tipo para el perfil de usuario
 type ProfileType = Database['public']['Tables']['profiles']['Row'];
-
-// Función para generar la clave de caché específica para el usuario
-const getProfileCacheKey = (userId: string) => `moodly-profile-cache-${userId}`;
-
-// Tiempo de expiración en milisegundos (5 minutos)
-const CACHE_TTL = 5 * 60 * 1000;
 
 // Tipo para el objeto de caché almacenado
 interface ProfileCache {
@@ -23,6 +32,12 @@ interface ProfileCache {
   timestamp: number;
   userId: string;
 }
+
+// Tiempo de expiración en milisegundos (5 minutos)
+const CACHE_TTL = 5 * 60 * 1000;
+
+// Función para generar la clave de caché específica para el usuario
+const getProfileCacheKey = (userId: string) => `moodly-profile-cache-${userId}`;
 
 /**
  * Guarda un perfil de usuario en la caché
@@ -44,11 +59,11 @@ export const cacheProfile = (userId: string, profile: ProfileType): void => {
     if (typeof window !== 'undefined') {
       const cacheKey = getProfileCacheKey(userId);
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      console.log(`Perfil almacenado en caché para usuario: ${userId}`);
+      safeLog(`Perfil almacenado en caché para usuario: ${userId}`);
     }
   } catch (error) {
     // Error al guardar en localStorage - solo registrar, no interrumpir
-    console.error('Error al guardar perfil en caché:', error);
+    safeError('Error al guardar perfil en caché:', error);
   }
 };
 
@@ -67,7 +82,7 @@ export const getCachedProfile = (userId: string): ProfileType | null => {
     // Intentar recuperar del localStorage
     const cachedData = localStorage.getItem(cacheKey);
     if (!cachedData) {
-      console.log(`No hay caché disponible para usuario: ${userId}`);
+      safeLog(`No hay caché disponible para usuario: ${userId}`);
       return null;
     }
     
@@ -79,17 +94,17 @@ export const getCachedProfile = (userId: string): ProfileType | null => {
     const isExpired = now - cache.timestamp > CACHE_TTL;
     
     if (isExpired) {
-      console.log(`Caché expirada para usuario: ${userId}`);
+      safeLog(`Caché expirada para usuario: ${userId}`);
       // Eliminar la caché si ha expirado
       localStorage.removeItem(cacheKey);
       return null;
     }
     
-    console.log(`Usando caché válida para usuario: ${userId}`);
+    safeLog(`Usando caché válida para usuario: ${userId}`);
     // Devolver el perfil si es válido
     return cache.profile;
   } catch (error) {
-    console.error('Error al recuperar perfil de caché:', error);
+    safeError('Error al recuperar perfil de caché:', error);
     return null;
   }
 };
@@ -105,7 +120,7 @@ export const clearProfileCache = (userId?: string): void => {
         // Limpiar solo la caché del usuario específico
         const cacheKey = getProfileCacheKey(userId);
         localStorage.removeItem(cacheKey);
-        console.log(`Caché de perfil eliminada para usuario: ${userId}`);
+        safeLog(`Caché de perfil eliminada para usuario: ${userId}`);
       } else {
         // Buscar y eliminar todas las claves de caché de perfil
         const keysToRemove = [];
@@ -118,10 +133,10 @@ export const clearProfileCache = (userId?: string): void => {
         
         // Eliminar cada clave encontrada
         keysToRemove.forEach(key => localStorage.removeItem(key));
-        console.log(`Se eliminaron ${keysToRemove.length} cachés de perfil`);
+        safeLog(`Se eliminaron ${keysToRemove.length} cachés de perfil`);
       }
     }
   } catch (error) {
-    console.error('Error al limpiar caché de perfil:', error);
+    safeError('Error al limpiar caché de perfil:', error);
   }
 };
