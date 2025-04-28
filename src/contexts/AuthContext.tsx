@@ -60,6 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Referencia para controlar si estamos ya obteniendo el perfil
   const isRefreshingProfile = useRef(false)
   
+  // Añadir una bandera para saber si ya se completó la verificación inicial
+  const hasCompletedInitialCheck = useRef(false)
+  
   // Función para obtener el perfil del usuario
   const fetchProfileFromSupabase = async (userId: string): Promise<ProfileType | null> => {
     try {
@@ -168,54 +171,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     async function fetchInitialSession() {
-      // Definir fetchInitialSession dentro del useEffect para evitar tenerlo como dependencia
-      safeLog('Intentando obtener sesión inicial');
-      
-      // Función para reintentar la carga de sesión si falla
-      async function retryFetchSession() {
-        if (retryAttemptsRef.current < maxRetryAttempts && isMounted) {
-          const delay = Math.pow(2, retryAttemptsRef.current) * 1000; // Backoff exponencial
-          safeLog(`Reintentando obtener sesión en ${delay}ms (intento ${retryAttemptsRef.current + 1}/${maxRetryAttempts})`);
-          
-          timeoutRef.current = setTimeout(async () => {
-            retryAttemptsRef.current += 1;
-            await fetchInitialSession();
-          }, delay);
-        } else if (isMounted) {
-          safeError('Número máximo de reintentos alcanzado');
-          setIsLoading(false);
-          setAuthError('No se pudo cargar la sesión después de varios intentos');
-        }
-      }
-      
       try {
-        const { data, error } = await supabase.auth.getSession();
+        safeLog('Obteniendo sesión inicial...');
+        const { data } = await supabase.auth.getSession();
         
-        // Verificar si componente sigue montado antes de actualizar estado
+        // Verificar si el componente sigue montado antes de actualizar el estado
         if (!isMounted) return;
         
-        if (error) {
-          throw error;
-        }
-        
         if (data?.session) {
-          safeLog('Sesión inicial encontrada');
+          safeLog('Sesión encontrada');
           setSession(data.session);
           setUser(data.session.user);
           
-          // Ahora intentamos obtener el perfil
-          safeLog('Obteniendo perfil para sesión inicial');
-          const fetchedProfile = await fetchProfileFromSupabase(data.session.user.id);
-          
-          // Verificar nuevamente si el componente sigue montado
-          if (isMounted && fetchedProfile) {
-            setProfile(fetchedProfile);
+          if (data.session.user) {
+            // Primero intentamos usar la caché
+            const cachedProfile = getCachedProfile(data.session.user.id);
+            if (cachedProfile) {
+              safeLog('Usando perfil en caché para sesión inicial');
+              setProfile(cachedProfile);
+            } else {
+              safeLog('Obteniendo perfil desde la base de datos');
+              const fetchedProfile = await fetchProfileFromSupabase(data.session.user.id);
+              if (isMounted) {
+                setProfile(fetchedProfile);
+              }
+            }
           }
+        } else {
+          safeLog('No hay sesión activa');
         }
         
         // Marcar carga inicial como completada
         if (isMounted) {
           setIsLoading(false);
+          hasCompletedInitialCheck.current = true;
         }
       } catch (err) {
         safeError('Error al obtener sesión inicial:', err);
@@ -224,6 +213,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
+
+    // Función para reintentar la carga de sesión si falla
+    const retryFetchSession = () => {
+      if (retryAttemptsRef.current >= maxRetryAttempts) {
+        safeLog('Número máximo de reintentos alcanzado');
+        setIsLoading(false);
+        hasCompletedInitialCheck.current = true; // Marcar como completado aunque haya fallado
+        setAuthError('Error al cargar la sesión después de múltiples intentos');
+        return;
+      }
+      
+      retryAttemptsRef.current += 1;
+      safeLog(`Reintentando obtener sesión (intento ${retryAttemptsRef.current})`);
+      
+      // Retraso exponencial con un máximo
+      const delay = Math.min(Math.pow(2, retryAttemptsRef.current) * 1000, 8000);
+      
+      // Limpiar cualquier timeout previo antes de crear uno nuevo
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      timeoutRef.current = setTimeout(fetchInitialSession, delay);
+    };
     
     fetchInitialSession();
     
@@ -232,6 +245,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
     };
   }, []); // El array vacío asegura que el efecto solo se ejecute una vez al montar el componente
+
+  // Efecto para manejar cuando la aplicación vuelve al primer plano
+  useEffect(() => {
+    let isMounted = true;
+
+    // Manejar eventos de visibilidad del documento para dispositivos móviles
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && hasCompletedInitialCheck.current && user) {
+        // Si la app vuelve a primer plano y ya se había completado la verificación inicial
+        safeLog('Aplicación vuelve a primer plano, verificando sesión silenciosamente');
+        
+        // Verificar la sesión sin mostrar el estado de carga
+        supabase.auth.getSession().then(({ data }) => {
+          if (data?.session && isMounted) {
+            if (!session || session.access_token !== data.session.access_token) {
+              setSession(data.session);
+              setUser(data.session.user);
+            }
+          }
+        }).catch(err => {
+          safeError('Error al verificar sesión en cambio de visibilidad:', err);
+        });
+      }
+    };
+    
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+    
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+      isMounted = false;
+    };
+  }, [session, user]); // Dependencias necesarias
 
   // Efecto para gestionar el cambio de usuario y la sesión
   useEffect(() => {

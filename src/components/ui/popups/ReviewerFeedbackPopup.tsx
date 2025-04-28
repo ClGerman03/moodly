@@ -5,6 +5,7 @@ import { X, ThumbsUp, ThumbsDown, MessageSquare, ChevronUp, ChevronDown } from '
 // Importamos los tipos necesarios desde módulos compartidos
 import { Section } from "@/app/tablero/types";
 import { SectionFeedback } from "@/types/supabase";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 
 // Removimos la definición del tipo LocalFeedbackType ya que no se utiliza
 
@@ -43,6 +44,9 @@ const ReviewerFeedbackPopup: React.FC<ReviewerFeedbackPopupProps> = ({
   onClose 
 }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  
+  // Implementar el hook para manejar el botón "atrás" en dispositivos móviles
+  useBackButtonHandler(isOpen, onClose);
   
   // Reset expanded sections when popup opens with new reviewer
   useEffect(() => {

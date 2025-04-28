@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Send } from "lucide-react";
 import { useImageFeedback } from "../../hooks/useImageFeedback";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import TextArea from "./shared/CommentForm";
 import ImageViewer from "./shared/ImageViewer";
 import ConfirmationMessage from "../../shared/ConfirmationMessage";
@@ -52,6 +53,9 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
   // Determinar si hay comentarios previos para esta imagen
   const hasExistingComments = imageComments.length > 0;
 
+  // Implementar el hook para manejar el botón "atrás" en dispositivos móviles
+  useBackButtonHandler(isOpen, onClose);
+
   // Función para manejar el envío del comentario
   const handleSubmit = () => {
     if (comment.trim() && onSubmitComment) {
@@ -74,31 +78,8 @@ const ImageFeedbackPopup: React.FC<ImageFeedbackPopupProps> = ({
     }
   }, [isOpen]);
 
-  // Manejar clic fuera para cerrar
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    // Manejar tecla escape para cerrar
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscKey);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscKey);
-    };
-  }, [isOpen, onClose]);
+  // Manejar clic fuera para cerrar - removido en favor de useBackButtonHandler
+  // que ahora maneja tanto el botón atrás como la tecla Escape
 
   // Si no está abierto, no renderizar nada
   if (!isOpen) return null;

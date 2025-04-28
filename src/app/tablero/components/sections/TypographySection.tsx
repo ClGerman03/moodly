@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 
 // Definition of available typography
 interface FontOption {
@@ -117,6 +118,9 @@ const TypographySection: React.FC<TypographySectionProps> = ({
   const closeAddFontDialog = () => {
     setIsAddingFont(false);
   };
+
+  // Usar el hook para manejar el botón "atrás" cuando el popup de tipografía está abierto
+  useBackButtonHandler(isAddingFont, closeAddFontDialog);
 
   const addFont = (font: FontOption) => {
     // Check if the font is already selected

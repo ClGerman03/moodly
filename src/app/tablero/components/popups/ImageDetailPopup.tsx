@@ -8,6 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import ImageTagsEditor from "./ImageTagsEditor";
 import ImageTags from "./ImageTags";
 import { useMediaQuery } from "@/app/tablero/hooks/useMediaQuery";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 
 interface ImageDetailPopupProps {
   isOpen: boolean;
@@ -99,8 +100,6 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   const [description, setDescription] = useState(initialDescription);
   const [tags, setTags] = useState<string[]>(initialTags);
   const [editingTitle, setEditingTitle] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [historyStateAdded, setHistoryStateAdded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   
@@ -108,6 +107,9 @@ const ImageDetailPopup: React.FC<ImageDetailPopupProps> = ({
   const isMobile = useMediaQuery("(max-width: 768px)");
   const popupRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  
+  // Usar el hook personalizado para manejar el botón atrás en dispositivos móviles
+  useBackButtonHandler(isOpen, onClose);
   
   // Configuración del editor de texto enriquecido - simplificada
   const editor = useEditor({

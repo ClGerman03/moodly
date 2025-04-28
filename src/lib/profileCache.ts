@@ -33,8 +33,9 @@ interface ProfileCache {
   userId: string;
 }
 
-// Tiempo de expiración en milisegundos (5 minutos)
-const CACHE_TTL = 5 * 60 * 1000;
+// Aumentar el tiempo de caché para reducir consultas frecuentes a la base de datos
+// Especialmente importante para evitar problemas cuando la app vuelve de segundo plano
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
 
 // Función para generar la clave de caché específica para el usuario
 const getProfileCacheKey = (userId: string) => `moodly-profile-cache-${userId}`;
@@ -86,8 +87,23 @@ export const getCachedProfile = (userId: string): ProfileType | null => {
       return null;
     }
     
-    // Parsear los datos
-    const cache: ProfileCache = JSON.parse(cachedData);
+    // Parsear los datos con manejo de errores
+    let cache: ProfileCache;
+    try {
+      cache = JSON.parse(cachedData);
+      
+      // Verificar integridad de los datos
+      if (!cache || !cache.profile || !cache.timestamp || !cache.userId) {
+        safeLog(`Datos de caché inválidos para usuario: ${userId}, limpiando caché`);
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+    } catch (parseError) {
+      // Error al parsear JSON, limpiar la caché corrupta
+      safeError(`Error al parsear caché para usuario: ${userId}`, parseError);
+      localStorage.removeItem(cacheKey);
+      return null;
+    }
     
     // Comprobar si ha expirado
     const now = Date.now();
